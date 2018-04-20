@@ -13,25 +13,37 @@ make_temporal_raster_df <- function(in_folder,
                                     date_chars, 
                                     date_format, 
                                     extension = "tif"){
+  # Returns a dataframe of raster paths and corresponding dates
   
-  # return dataframe of paths and dates for each raster in folder
-  
-  # list paths from in_folder and put into df
+  # Put files into a dataframe
   out_df <- as.data.frame(paste0(list.files(path = in_folder, 
-                                            pattern = paste0(".",extension))),
+                                            pattern = paste0(".",
+                                                             extension,
+                                                             "$"))),
                           stringsAsFactors = FALSE)
   
-  # change name of paths column
-  names(out_df) <- "paths_field"
-  # add date_time column
- 
-  out_df <- out_df %>%
-    mutate(date_time = as.Date(
-      str_sub(paths_field, date_chars[[1]], date_chars[[2]]),
-      format = date_format),
-      paths_field = paste(in_folder, paths_field, sep = "\\")) %>%
-    filter(date_time >= start_date &
-             date_time <= end_date)
+  # Name the paths column
+  names(out_df) <- "path_field"
   
+  # Add datetime variable column
+  out_df <- dplyr::mutate(out_df,
+                   date_time = as.Date(
+                     stringr::str_sub(path_field, date_chars[[1]], date_chars[[2]]),
+                     format = date_format
+                   ))
+  
+  # Complete paths_field with full path
+  out_df <- out_df %>%
+                   mutate(path_field = paste(in_folder, path_field, sep = "\\")
+                  
+  )
+  
+  # If date field has <NA>, warn user that date characters are wrong
+  if(is.na(out_df$date_time[[1]])){
+    warning("Date characters or format is incorrrectly specified, check date_time field")
+  }
+  
+  
+  # Return temporal raster df
   return(out_df)
 }
