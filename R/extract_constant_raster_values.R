@@ -7,7 +7,9 @@
 #' with AN1, AN2, AN3 ... etc.
 #' @return input temperatures_df with added columns, one for each raster in rasters_list
 #' @export
-extract_constant_raster_values <- function(temperatures_df, rasters_list, stations = stations_sp){
+extract_constant_raster_values <- function(temperatures_df,
+                                           rasters_list, 
+                                           stations = stations_sp){
   
   # Loop through each raster in list
   for(i in seq_along(rasters_list)){
