@@ -5,6 +5,7 @@ extract_temporal_raster_values <- function(temporal_rasters_df,
                                            temperatures_df, 
                                            stations = stations_sp){
   
+  
   # Loop through each row in temporal_rasters_df
   for(i in seq_along(temporal_rasters_df[[1]])){
     
