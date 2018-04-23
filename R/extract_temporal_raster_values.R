@@ -9,7 +9,7 @@ extract_temporal_raster_values <- function(temporal_rasters_df,
   
   # Arrange by date
   temporal_rasters_df <- temporal_rasters_df %>%
-    arrange(date_time)
+    dplyr::arrange(date_time)
   
   # Loop through each row in temporal_rasters_df
   for(i in seq_along(temporal_rasters_df[[1]])){
@@ -41,8 +41,8 @@ extract_temporal_raster_values <- function(temporal_rasters_df,
   
   # Melt dataframe by date
   extracts_df <- reshape2::melt(extracts_df, id = c("stationid","EASTING","NORTHING")) %>%
-    dplyr::mutate(variable = str_sub(variable, 2, 11)) %>%
-    dplyr::mutate(date_time = as.Date(variable, format = "%Y.%m.%d")) %>%
+    dplyr::mutate(temp_col = stringr::str_sub(variable, 2, 11)) %>%
+    dplyr::mutate(date_time = as.Date(temp_col, format = "%Y.%m.%d")) %>%
     dplyr::select(stationid, value, date_time) 
   
   # Rename new column
