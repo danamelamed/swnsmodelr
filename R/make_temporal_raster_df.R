@@ -43,6 +43,10 @@ make_temporal_raster_df <- function(in_folder,
     warning("Date characters or format is incorrrectly specified, check date_time field")
   }
   
+  # Filter by dates
+  out_df <- out_df %>%
+                   filter(date_time >= start_date &
+                          date_time <= end_date)
   
   # Return temporal raster df
   return(out_df)

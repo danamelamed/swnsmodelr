@@ -5,7 +5,11 @@
 \title{Extracts raster values from a set of rasters in the temporal_raster_df}
 \usage{
 extract_temporal_raster_values(temporal_rasters_df, temperatures_df,
-  stations = stations_sp)
+  col_name = "temporal_raster_value", stations = stations_sp,
+  verbose = TRUE)
+}
+\value{
+temperatures table with temporal raster values
 }
 \description{
 Extracts raster values from a set of rasters in the temporal_raster_df
