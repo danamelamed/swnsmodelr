@@ -4,8 +4,8 @@
 \alias{generate_gdd_output}
 \title{Generates accumulated GDD output rasters}
 \usage{
-generate_gdd_output(daily_avg_raster_df, gdd_base, output_time_slice,
-  output_folder, output_format = "GTiff")
+generate_gdd_output(daily_avg_raster_df, gdd_base, start_date, end_date,
+  output_time_slice, output_folder, output_format = "GTiff")
 }
 \arguments{
 \item{daily_avg_raster_df}{output from make_temporal_raster_df with folder 
