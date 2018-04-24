@@ -3,4 +3,6 @@
 export(add_date_columns)
 export(extract_constant_raster_values)
 export(extract_temporal_raster_values)
+export(generate_gdd_output)
 export(make_temporal_raster_df)
+export(model_output)

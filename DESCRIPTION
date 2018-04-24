@@ -10,7 +10,8 @@ Depends: R (>= 3.4.1),
     stringr,
     magrittr,
     lubridate,
-    reshape2
+    reshape2,
+    magrittr
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
