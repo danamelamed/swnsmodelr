@@ -102,20 +102,5 @@ generate_gdd_output <- function(daily_average_rasters_df,
     } 
   } 
 
-daily_average_rasters_df <- make_temporal_raster_df(in_folder = "Z:\\Dana\\Daily_Averages",
-                                               start_date = ymd('2012-01-01'),
-                                               end_date = ymd('2017-12-31'),
-                                               date_chars = c(10,19),
-                                               date_format = "%Y-%m-%d",
-                                               extension   = "tif")
 
-gdd_output <- generate_gdd_output(daily_average_rasters_df = daily_average_rasters_df,
-                                  gdd_base = 5,
-                                  start_date = ymd('2012-05-01'),
-                                  end_date   = ymd('2017-12-31'),
-                                  output_time_slice = "monthly",
-                                  growing_season = FALSE,
-                                  output_folder = "Z:\\Dana\\GDD5_Monthly",
-                                  output_format = "GTiff",
-                                  plot_gdd_raster = TRUE)
 
