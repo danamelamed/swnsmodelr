@@ -4,15 +4,30 @@
 \alias{generate_gdd_output}
 \title{Generates accumulated GDD output rasters}
 \usage{
-generate_gdd_output(daily_avg_raster_df, gdd_base, start_date, end_date,
-  output_time_slice, output_folder, output_format = "GTiff")
+generate_gdd_output(daily_average_rasters_df, gdd_base, start_date, end_date,
+  output_time_slice, growing_season = TRUE, output_folder,
+  output_format = "GTiff", plot_gdd_raster = FALSE)
 }
 \arguments{
-\item{daily_avg_raster_df}{output from make_temporal_raster_df with folder 
-of the daily temperature average rasters}
+\item{daily_average_rasters_df}{The output of using make_temporal_rasters_df
+on the generated daily averages}
 
-\item{output_time_slice}{"daily", "weekly", "monthly", or "yearly"}
-}
-\description{
-Generates accumulated GDD output rasters
+\item{gdd_base}{The base level of development for GDD equation}
+
+\item{start_date}{The starting date to include in GDD calculations}
+
+\item{end_date}{The last date to include in GDD calculations}
+
+\item{output_time_slice}{The time slice of GDD rasters that will be outputted.
+With "daily", all daily GDDs rasters are written; "weekly", a GDD raster is
+written every sunday; "monthly" a GDD raster is written on the last day of each 
+month, "yearly" a GDD raster is written on the the last day for each year}
+
+\item{growing_season}{If TRUE, only months april - november will be included if FALSE,
+no restriction on months will be applied}
+
+\item{output_format}{Default is set to "GTiff", see ?writeFormat for more options}
+
+\item{plot_gdd_raster}{If TRUE, GDD rasters about to written out will be plotted in the
+Plots pane. If the pane is too small, an error will cause the script to stop running.}
 }

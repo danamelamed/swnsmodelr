@@ -1,7 +1,22 @@
 #' Generates accumulated GDD output rasters
-#' @param daily_avg_raster_df output from make_temporal_raster_df with folder 
-#' of the daily temperature average rasters
-#' @param output_time_slice "daily", "weekly", "monthly", or "yearly"
+#' @description A GDD raster is made for each day from daily average temperature
+#' rasters and a base temperature level. The GDD is accumulated everyday, and written out
+#' at a specified time slice. Usually, GDD is insiginficant outside of the growing season
+#' months. They can be excluded with growing_season = TRUE.
+#' @param daily_average_rasters_df The output of using make_temporal_rasters_df
+#' on the generated daily averages
+#' @param gdd_base The base level of development for GDD equation
+#' @param start_date The starting date to include in GDD calculations
+#' @param end_date The last date to include in GDD calculations
+#' @param output_time_slice The time slice of GDD rasters that will be outputted.
+#' With "daily", all daily GDDs rasters are written; "weekly", a GDD raster is
+#' written every sunday; "monthly" a GDD raster is written on the last day of each 
+#' month, "yearly" a GDD raster is written on the the last day for each year
+#' @param growing_season If TRUE, only months april - november will be included if FALSE,
+#' no restriction on months will be applied
+#' @param output_format Default is set to "GTiff", see ?writeFormat for more options
+#' @param plot_gdd_raster If TRUE, GDD rasters about to written out will be plotted in the
+#' Plots pane. If the pane is too small, an error will cause the script to stop running.
 #' @export
 #' 
 generate_gdd_output <- function(daily_average_rasters_df,
@@ -13,8 +28,6 @@ generate_gdd_output <- function(daily_average_rasters_df,
                                 output_folder,
                                 output_format = "GTiff",
                                 plot_gdd_raster = FALSE){
-  
-
   
   
   # Filter daily averages by start_date and end_date
@@ -56,7 +69,8 @@ generate_gdd_output <- function(daily_average_rasters_df,
     
     date_now <- daily_average_rasters_year_now$date_time[[1]]
     print("Accumulating GDD...")
-        for(i in 2:length(daily_average_rasters_year_now[[1]])){
+    year_rows <- length(daily_average_rasters_year_now[[1]])
+        for(i in 2: year_rows){
             
 
             if(output_time_slice == "daily"){
@@ -77,7 +91,7 @@ generate_gdd_output <- function(daily_average_rasters_df,
                   }
               } else if(output_time_slice == "yearly"){
               # check if last day of year
-              if(date_now == ymd(paste(year_now,12,31, sep = "-")))
+              if(date_now == daily_average_rasters_year_now[[2]][[year_rows]])
                 
                 writeGDDout(gdd_out,output_time_slice, gdd_base, date_now, plot_gdd_raster,
                             output_folder, output_format) 
