@@ -1,0 +1,58 @@
+---
+title: "Vignette"
+author: "Dana Melamed"
+date: "April 30, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'F:\\Packages\\swnsmodelr')
+library(swnsmodelr)
+```
+
+## Selecting Rasters as Inputs
+
+### Constant Rasters
+Rasters of physical properties of the environment that are constant through time are referred to as "constant rasters" in the package. Examples of these rasters, that are provided as extra data, are the elevation, aspect, slope, proximity to coast line, easting and northing values of the region. Since the values from these rasters do not change over time, they only need to be extracted to the weather station points once. In this section is an overview of how to select and manipulate these rasters.
+
+#### Bring Constant Rasters into R Environment
+
+Throughout the modelling workflow provided in the swnsmodelr package, the constant rasters should be in the form of raster objects in a list. Rasters have been provided in the swnsmodelr project. Selecting rasters from the project folder and storing them as a list of raster objects can be done with the following code:
+```{r}
+# See list of rasters in Rasters project folder
+
+
+# Store names of rasters from list
+rasters_names_list <- c("dem.tif","tpi.tif","asp.tif","east.tif","north.tif","ptoc.tif")
+
+# Convert to raster objects
+rasters_list <- lapply(FUN = raster,
+                       X   = paste0("Rasters\\",rasters_names_list))
+```
+
+
+To see the properties of the rasters in the list, simply call it by name:
+```{r}
+rasters_list
+```
+
+
+A constant raster can be easily added to the list from a different location as in the commented-out example below:
+```{r}
+# # Add a constant raster from a different location to the rasters_list
+# rasters_list[[length(rasters_list) + 1]] <- raster("path\\to\\raster.extension")
+
+```
+
+The rasters provided in the package project have a resolution of 20m, and are in the projection UTM zone 20N. The "names" slot is the phenomenom represented by the raster. Creating a "brick" of the raster is an easy way to plot them all at once:
+```{r}
+constant_rasters <- brick(rasters_list)
+plot(constant_rasters)
+```
+
+
+#### Investigate Potential Usefulness of Constant Rasters
+
+The first thing to investigatea about the usefulness of a constant raster, is the variation among weather stations. Obviously, if only small amount of the raster values are represented at stations, the model will extrapolating to model temperature over the region, rather that interpolating. 
+

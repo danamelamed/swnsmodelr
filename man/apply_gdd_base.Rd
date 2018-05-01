@@ -6,6 +6,14 @@
 \usage{
 apply_gdd_base(raster, gdd_base)
 }
+\arguments{
+\item{raster}{A daily average raster}
+
+\item{gdd_base}{The set base temperature for setting GDD}
+}
+\value{
+The raster with the gdd_base subtracted, and all negatives set to 0
+}
 \description{
 Applies the base GDD level to an average daily raster
 }

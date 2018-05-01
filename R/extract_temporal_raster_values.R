@@ -40,21 +40,22 @@ extract_temporal_raster_values <- function(temporal_rasters_df,
   extracts_df <- as.data.frame(stations)
   
   # Melt dataframe by date
-  extracts_df <- reshape2::melt(extracts_df, id = c("stationid","EASTING","NORTHING")) %>%
+  extracts_df <- reshape2::melt(extracts_df, id = c("stationid","EASTING","NORTHING"))
+
+  extracts_df <- extracts_df %>%
     dplyr::mutate(temp_col = stringr::str_sub(variable, 2, 11)) %>%
     dplyr::mutate(date_time = as.Date(temp_col, format = "%Y.%m.%d")) %>%
-    dplyr::select(stationid, value, date_time) 
+    dplyr::select(stationid, value,date_time) 
   
   # Rename new column
   names(extracts_df)[names(extracts_df) == "value"] <- col_name
   
-  
+
   # Join back to temperatures_df
   out_df <- dplyr::left_join(temperatures_df, extracts_df,
                       by = c("stationid", "date_time"))
   
-  
-  
+
   
   return(out_df)
   

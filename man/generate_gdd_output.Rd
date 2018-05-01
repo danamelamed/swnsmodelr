@@ -31,3 +31,9 @@ no restriction on months will be applied}
 \item{plot_gdd_raster}{If TRUE, GDD rasters about to written out will be plotted in the
 Plots pane. If the pane is too small, an error will cause the script to stop running.}
 }
+\description{
+A GDD raster is made for each day from daily average temperature
+rasters and a base temperature level. The GDD is accumulated everyday, and written out
+at a specified time slice. Usually, GDD is insiginficant outside of the growing season
+months. They can be excluded with growing_season = TRUE.
+}

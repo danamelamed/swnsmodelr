@@ -9,6 +9,10 @@ add_date_columns(date_time_df)
 \arguments{
 \item{date_time_df}{a dataframe with a date column called "date_time"}
 }
+\value{
+The input dataframe with new columns for the yday, week, month 
+and year
+}
 \description{
 Adds extra date columns to a dataframe
 }
