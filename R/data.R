@@ -26,7 +26,11 @@
 #'     \item{temp_min}{minimum daily temperature (C)}
 #'     \item{EASTING}{easting value of station in UTM zone 20}
 #'     \item{NORTHING}{northing value of station in UTM zone 20}
-#'     \item{dem}{elevation in metres}
-#'     \item{tpi}{topographic position index, ranges 0 - 1}
-#'     \item{asp_c}{}}}
+#'     \item{dem}{value extracted from dem, elevation in metres}
+#'     \item{tpi}{value extracted from tpi raster, topographic position index, ranges 0 - 1}
+#'     \item{asp_c}{aspect with abs(x - 180) applied to it}
+#'     \item{east}{value extracted from easting raster}
+#'     \item{north}{value extracted from northing raster}
+#'     \item{ptoc}{value extracted from proxmity to coast raster}
+#'     \item{sum_irradiance}{value extracted from series of daily GOES rasters}}
 "model_df_700"
