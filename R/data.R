@@ -34,3 +34,6 @@
 #'     \item{ptoc}{value extracted from proxmity to coast raster}
 #'     \item{sum_irradiance}{value extracted from series of daily GOES rasters}}
 "model_df_700"
+
+
+

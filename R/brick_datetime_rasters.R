@@ -1,4 +1,5 @@
 #' Adds rasters of datetime fields to brick
+#' @export
 brick_datetime_rasters <- function(brick, template_raster, date.now){
   date_field <- c("yday","week","year")
   

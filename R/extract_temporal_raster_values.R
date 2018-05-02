@@ -21,8 +21,6 @@ extract_temporal_raster_values <- function(temporal_rasters_df,
     date_now <- temporal_rasters_df[[2]][[i]]
     names(raster) <-  date_now # names to xYYYY.MM.DD
     
-    # Project raster to stations proj4string
-    raster <- raster::projectRaster(from = raster, crs = stations@proj4string)
     
     stations$extract <- raster::extract(raster, stations)
     names(stations)[names(stations) == "extract"] <- names(raster)
