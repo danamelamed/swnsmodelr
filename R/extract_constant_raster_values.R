@@ -13,11 +13,10 @@ extract_constant_raster_values <- function(temperatures_df,
   
   # Loop through each raster in list
   for(i in seq_along(rasters_list)){
-    
-    raster <- raster::projectRaster(from = rasters_list[[i]], crs = stations@proj4string)
+    raster <- rasters_list[[i]]
     # Extract raster values to spatial points dataframe of SWNS stations
-    stations$extract <- suppressWarnings(raster::extract(x = raster,
-                                           y = stations_sp))
+    stations$extract <-(raster::extract(x = raster,
+                                           y = stations))
     # Rename extracted values column to the raster name
     names(stations)[names(stations) == "extract"] <- names(raster)
   }

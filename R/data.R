@@ -36,4 +36,8 @@
 "model_df_700"
 
 
+#' Temperatures from all Nova Scotia weather stations
+"all_stations_temps_df"
 
+#' All Nova Scotia Weather stations as a SpatialPointsDataFrame
+"all_stations_sp"
