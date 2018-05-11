@@ -1,43 +1,21 @@
-#' Daily temperatures in SWNS
-#' @format A dataframe containing daily temperature readings from weather stations in SWNS
-#'         from 2012 - 2017
-#' \describe{
-#'     \item{stationid}{stationd identification code}
-#'     \item{date_time}{date of temperature reading}
-#'     \item{temp_min}{maximum daily temperature (C)}
-#'     \item{temp_mean}{average daily temperature (C)}
-#'     \item{temp_min}{minimum daily temperature (C)}
-#'     \item{EASTING}{easting value of station in UTM zone 20}
-#'     \item{NORTHING}{northing value of station in UTM zone 20}}
-"daily_temperatures_df"
-
-#' Station points in SWNS
-#' @format Spatial Points Data Frame
-"stations_sp"
-
-#' Temperatures and variables at 700m resolution
-#' @format dataframe
-#' \describe{
-#'     \item{X}{unique number for each record}
-#'     \item{stationid}{stationid identification code}
-#'     \item{date_time}{date of temperature reading}
-#'     \item{temp_min}{maximum daily temperature (C)}
-#'     \item{temp_mean}{average daily temperature (C)}
-#'     \item{temp_min}{minimum daily temperature (C)}
-#'     \item{EASTING}{easting value of station in UTM zone 20}
-#'     \item{NORTHING}{northing value of station in UTM zone 20}
-#'     \item{dem}{value extracted from dem, elevation in metres}
-#'     \item{tpi}{value extracted from tpi raster, topographic position index, ranges 0 - 1}
-#'     \item{asp_c}{aspect with abs(x - 180) applied to it}
-#'     \item{east}{value extracted from easting raster}
-#'     \item{north}{value extracted from northing raster}
-#'     \item{ptoc}{value extracted from proxmity to coast raster}
-#'     \item{sum_irradiance}{value extracted from series of daily GOES rasters}}
-"model_df_700"
+#' Weather station data in Southwest Nova Scotia
+#' 
+#' A dataset containing the weather station temperature recordings and coordinates
+#' 
+"swns_stations_df"
 
 
-#' Temperatures from all Nova Scotia weather stations
-"all_stations_temps_df"
+#' Weather station data in Southwest Nova Scotia from 200m resolution
+#' 
+#' A dataset containing the weather station temperature recordings, coordinates, and 
+#' values extracted from environmental rasters at 200m resolution.
+#' 
+"swns_stations_df_200"
 
-#' All Nova Scotia Weather stations as a SpatialPointsDataFrame
-"all_stations_sp"
+#' Weather stations points in Southwest Nova Scotia
+#' 
+#' A spatial object with 
+
+
+
+

@@ -1,0 +1,469 @@
+---
+title: "Model Selection"
+output:
+  rmarkdown::html_document:
+    fig_caption: yes
+author: "Dana Melamed"
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+options(knitr.table.format = "html")
+library(swnsmodelr)
+library(ggplot2)
+library(kableExtra)
+```
+
+```{r include=FALSE}
+# Names of rasters in Rasters directory (everything before extension)
+rasters_names_list <- list("dem",  # elevation
+                          "ptoc", # proxmity to coast
+                          "east", # easting
+                          "north",# northing
+                          "asp_c",  # aspect
+                           "tpi")
+rasters_list <- lapply(FUN = raster,
+                       X   = paste0("F:\\Packages\\swnsmodelr\\Rasters\\200\\",rasters_names_list, ".tif"))
+
+```
+
+ Daily mean temperatures in Nova Scotia were interpolated based on models selected from testing on a subset of temperatures from 2012. The amount of records in one day was insufficient to build daily models, given the quantity of covariates we wish to include. Generating models on a weekly basis, with smooth terms that are dependent on the day of the year, allowed for all covariates to be used, and for daily variability to still be addressed.   
+  The models were generated over the study station data, plus data from some external stations that were located at unrepresented areas of SWNS. The models were assessed after being applied to external stations, plus some study stations, and evaluating the residuals and GCV scores. 
+  
+
+### Determining stations for modelling and validating
+
+  In the package `swnsmodelr`, temperature records from 98 stations in SWNS for the years 2012 - 2018 are stored in the data frame `swns_stations_df`. The data frame includes data from the stations implemented by the AGRG, and those by other agencies such as Environment Canada and the Department Natural Resources. The station I.D.'s of both sets of stations are stored as the lists `study_stations_list` and `external_stations_list`. The lists can be used to filter the data frame to get either set of stations. Figure 1 shows the locations of the study stations and external stations over a DEM of SWNS.
+  
+```{r, echo = FALSE,  fig.hold=TRUE, warning=FALSE,fig.cap= "**Figure 1**: Locations of study stations (square, n=, 72) and external stations (diamond, n=27)"}
+study_stations_df <- swns_stations_df %>% filter(stationid %in% study_stations_list)
+ext_stations_df  <- swns_stations_df %>% filter(stationid %in% ext_stations_list)
+
+study_stations_sp <- study_stations_df %>% filter(!duplicated(stationid))
+coordinates(study_stations_sp) = ~ EASTING  + NORTHING
+
+ext_stations_sp <- ext_stations_df %>% filter(!duplicated(stationid))
+coordinates(ext_stations_sp) = ~ EASTING  + NORTHING
+
+plot(rasters_list[[1]])
+points(study_stations_sp, pch = 16)
+points(ext_stations_sp, pch = 18)
+
+
+
+```
+
+
+
+What data is there for the stations (temps over years)
+
+```{r}
+study_stations_df <- add_date_columns(study_stations_df)
+ggplot(data = study_stations_df) +
+  geom_smooth(aes(x = date_time,y = temp_mean, colour = stationid), se = FALSE) +
+  theme(legend.position = "none") +
+  facet_wrap(~year, scale = "free")
+```
+
+```{r}
+ext_stations_df <- add_date_columns(ext_stations_df)
+ggplot(data = ext_stations_df) +
+  geom_smooth(aes(x = date_time,y = temp_mean, colour = stationid), se = FALSE) +
+  theme(legend.position = "none") +
+  facet_wrap(~year, scale = "free")
+```
+
+
+
+
+  The study stations alone do not provide sufficient coverage of SWNS in the eastern most portion surrounding the Halifax area, and the Annapolis valley. There are external locations in those areas which were included in the model stations along with the study stations. The external stations that were included as model stations were '6354' in Greenwood, '6456' north is St. Margaret's Bay, '47187' in Halifax, 'DN025' south of Digby and '6497' near Berwick. A  number of study stations were used in validating the models rather than generating them, these stations were: "YA4","S160","AN3","CL4","KE5","WE5","WE2","LI2","CH4". These stations are located in areas represented by model stations but not so close that their modelling values were essentially the same.
+Their locations are plotted in Figure 2. 
+
+
+
+```{r, echo = FALSE, fig.cap = "**Figure 2**: Locations of the model stations (shape, n = ?) and validation stations (shape, n = ?)"}
+# MODEL STATIONS
+swns_stations_df_200 <- add_date_columns(swns_stations_df_200)
+
+## dataframe
+model_stations_df <- swns_stations_df_200 %>%
+          # Include all study stations
+  filter(stationid %in% study_stations_list |
+          # Included these ext stations
+          stationid %in% c("6354","47187","6456","DNR025","6497")) %>% 
+          # Remove these study stations
+  filter((stationid %in% c("YA4","S160","AN3","CL4","KE5","WE5","WE2","LI2","CH4")) == FALSE)
+# 
+#   filter((stationid %in% c("YA4","S160","AN3","CL4","CH4",
+#                            "KE5","WE5","WE2","LI2","BR3","MI5")) == FALSE)
+## spatial points object
+model_stations_sp <- model_stations_df %>%
+                      filter(!duplicated(stationid))
+coordinates(model_stations_sp) = ~ EASTING + NORTHING
+
+
+# VALIDATION STATIONS
+
+## dataframe
+val_stations_df   <- swns_stations_df_200 %>% 
+          # Include all ext stations
+  filter(stationid %in% ext_stations_list  |    
+          # Add these study stations
+           stationid %in% c("YA4","S160","AN3","CL4","KE5","WE5","WE2","LI2","CH4")) %>%
+          # Remove these ext stations
+  filter(!(stationid %in% c("6354", "47187", "6456","27141", "DLG006", "DNR024",
+                            "6501", "DNR025", "DNR003", "6497")             
+           )
+         )         
+
+## spatial points object
+val_stations_sp   <- val_stations_df  %>%
+                      filter(!duplicated(stationid))
+coordinates(val_stations_sp) = ~ EASTING + NORTHING
+
+
+# Make plot
+plot(rasters_list[[1]])
+points(model_stations_sp, pch = 16) 
+points(val_stations_sp, pch = 18) 
+
+
+```
+
+
+
+
+
+### Generating the test models
+
+The data frame `swns_stations_df_200` contains daily temperature records for all 98 stations in SWNS included in modelling and validation, along with extracted values of environmental rasters at 200m resolutions. This data frame was split into model and validaton station dataframes. Using these two data frames, GAM formulas, and specified dates, the function `swnsmodelr::validate_weekly_GAMs` returns residuals, GCV scores and adjusted R square values at the validation stations. An alternate formula is specified for the case that solar irradiance data is too limited to be included in the GAM without throwing an error. The alternative formulas were the same as the formula with the exception of the solar irradiance. 
+
+
+
+
+```{r, eval = FALSE}
+# Generate a data frame 
+validation_df <- swnsmodelr::validate_weekly_GAMs(model_stations_df,
+                                                  val_stations_df,
+                                                  years,
+                                                  weeks,
+                                                  formula,
+                                                  alt_formula)
+
+```
+
+Different questions that were answered when selecting a model was whether the use of daily temperature minimums and maximums was more accurate than means, what amount of knots produced the optimal validation results, and finally whether removing any of the variables improved the models.
+
+#### Daily Minimums and Maximums, or Means?
+
+Many papers in the literature found it was optimal to model daily minimums and maximums separately, and then averaging them to calculate daily means. The results of the test show that modelling with the daily mean temperature produces more accurate results than do models of daily minimum and maximum temperatures. 
+
+
+A frequency plot (or density, in R), shows that the daily mean temperature has the most residuals around zero. The steepness of the slope for daily temperature means also suggests there are less residuals of a higher values relative to daily minimum and maximum temperatures.
+
+
+-When the residuals are plotted daily for each month, mean temperature has the lowest smooth line for a  majority of the months.
+- However, something strange is happening at the end of June. Since all the data values on this day seem ordinary, something must be happening with the model.
+```{r include=FALSE}
+# Generate models with daily mins, maxs and means
+ind_var <- list("min", "max", "mean")
+
+# Create list of three dataframes
+val_df_list <- list()
+# Loop over each option: min, max and mean
+for(i in seq_along(ind_var)){
+    val_df_list[[i]] <- validate_weekly_GAMs(model_stations_df = model_stations_df,
+                                            val_stations_df = val_stations_df,
+                                            years = 2012,
+                                            weeks = 1:52,
+                                            formula =paste0("temp_",ind_var[[i]],"~
+                                                         s(east,north) +
+                                                         s(dem, yday)  +
+                                                         s(sum_irradiance, yday) +
+                                                         s(asp_c, yday) +
+                                                         s(tpi, yday) + 
+                                                         s(ptoc,yday)"),
+                                            alt_formula =paste0("temp_",ind_var[[i]],"~
+                                                         s(east,north) +
+                                                         s(dem, yday)  +
+                                                         s(asp_c, yday) +
+                                                         s(tpi, yday) + 
+                                                         s(ptoc,yday)")
+                                            ) 
+    val_df_list[[i]]$ind_var <- ind_var[[i]]
+    val_df_list[[i]]$knots   <- "no limit"
+}
+
+val_df <- dplyr::bind_rows(val_df_list)
+
+```
+
+
+
+
+```{r, fig.hold = TRUE,echo = FALSE}
+
+ggplot(data = val_df, mapping = aes(x = week, y = gcv)) +
+  geom_point(aes(colour = ind_var)) +
+  geom_smooth(aes(colour =ind_var))
+ 
+
+ggplot(data = val_df, mapping = aes(x = abs_resid)) +
+  geom_density(aes(colour = ind_var))
+
+ggplot(data = val_df, mapping = aes(x = temp_mean, y = abs_resid)) +
+  geom_smooth(aes(colour = ind_var), se = FALSE) 
+
+```
+
+
+
+
+
+
+- So far, GAM has been used without putting limitations on knots. 
+- It was found that limiting the number of knots worked to reduced the erroneous residuals
+
+add knots to max: val_df.max
+
+```{r,warning=FALSE, include=FALSE}
+knots <- list(1, 5 ,9)
+ind_vars<- list("min","max","mean")
+val_knots_df <- list()
+for(j in seq_along(ind_var)){# Generate models with daily mins, maxs and means
+        
+        val_no_limit<- filter(val_df, ind_var == ind_vars[[j]])
+        # Create list of three dataframes
+        val_df_list<- list()
+        # Loop over each option: min, max and mean
+        for(i in seq_along(knots)){
+            val_df_list[[i]] <- validate_weekly_GAMs(model_stations_df = model_stations_df,
+                                                    val_stations_df = val_stations_df,
+                                                    years = 2012,
+                                                    weeks = 1:52,
+                                                    formula =paste0("temp_",ind_vars[[j]],"~
+                                                                 s(east,north, k=",knots[[i]],") +
+                                                                 s(dem, yday, k=",knots[[i]],")  +
+                                                                 s(sum_irradiance, yday, k=",knots[[i]],") +
+                                                                 s(asp_c, yday, k=",knots[[i]],") +
+                                                                 s(tpi, yday, k=",knots[[i]],") + 
+                                                                 s(ptoc,yday, k=3)"),
+                                                    alt_formula =paste0("temp_",ind_vars[[j]]," ~
+                                                                 s(east,north, k=",knots[[i]],") +
+                                                                 s(dem, yday, k=",knots[[i]],")  +
+                                                                 s(asp_c, yday, k=",knots[[i]],") +
+                                                                 s(tpi, yday, k=",knots[[i]],") + 
+                                                                 s(ptoc,yday, k=3)")
+                                                    ) 
+            val_df_list[[i]]$knots <- as.character(knots[[i]])
+            val_df_list[[i]]$ind_var <- ind_var[[j]]
+        }
+        
+        val_knots_df[[j]] <- dplyr::bind_rows(val_no_limit , val_df_list)
+}
+
+val_knots_df <- dplyr::bind_rows(val_knots_df)
+  
+```
+
+
+
+```{r message=FALSE, warning=FALSE}
+ggplot(data = val_knots_df, mapping = aes(x = week, y = abs_resid)) +
+  geom_smooth(aes(colour = knots)) +
+  facet_wrap(~ind_var)+
+  xlab("Week of 2012") +
+  ylab("Absolute Residuals")
+
+  
+ggplot(data = val_knots_df, mapping = aes(x = week, y = gcv)) +
+  geom_point(aes(colour = knots)) +
+  geom_smooth(aes(colour = knots)) +
+  facet_wrap(~ind_var)+
+  xlab("Week of 2012") +
+  ylab("GCV Score") +
+  coord_cartesian(ylim=c(0,15))
+
+ggplot(data = val_knots_df, mapping = aes(x = week, y = rsq)) +
+  geom_point(aes(colour = knots)) +
+  geom_smooth(aes(colour = knots)) +
+  facet_wrap(~ind_var)+
+  xlab("Week of 2012") +
+  ylab("Adjusted R Squared")
+
+ggplot(data = val_knots_df, mapping = aes(x = abs_resid)) +
+  geom_histogram(aes(fill = knots), colour = "grey") +
+  facet_wrap(~ind_var) +
+  xlab("Absolute Residual Values") +
+  ylab("Count")+
+  coord_cartesian(xlim=c(0,10))
+
+
+```
+
+
+What if i dont restrict E and N?
+
+
+
+
+```{r}
+ggplot(data = val_df.3, mapping = aes(x = week, y = abs_resid)) +
+  geom_smooth(aes(colour = model_opt), se = FALSE) 
+
+ggplot(data = val_df.3, mapping = aes(x = week, y = gcv)) +
+  geom_smooth(aes(colour = model_opt), se = FALSE) 
+
+ggplot(data = val_df.3, mapping = aes(x = abs_resid)) +
+  geom_density(aes(colour = model_opt))
+  
+```
+
+
+
+
+
+ removing variables one by one
+ 
+```{r include=FALSE}
+formula_list <- list("temp_mean~ s(east,north,k = 9) + 
+                                      s(dem, yday,k = 9) +
+                                      s(asp_c, yday,k = 9) +
+                                      s(tpi, yday,k = 9) +
+                                      s(sum_irradiance, yday, k = 9)+
+                                     s(ptoc,yday, k = 3)", # all
+                         
+                      "temp_mean~ s(east,north,k = 9) + 
+                                  s(dem, yday,k = 9) +
+                                  s(asp_c, yday,k = 9) + 
+                                      s(sum_irradiance, yday, k = 9)+
+                                  s(tpi, yday,k = 9) ", # remove ptoc
+                      
+                     "temp_mean~ s(east,north,k = 9) + 
+                                 s(dem, yday,k = 9)  +
+                                 s(asp_c, yday,k = 9) +
+                                      s(sum_irradiance, yday, k = 9)+
+                                 s(ptoc,yday, k = 3)", # remove tpi
+                     
+                     "temp_mean~ s(east,north,k = 9) + 
+                                 s(dem, yday,k = 9)  +
+                                 s(tpi, yday,k = 9) + 
+                                      s(sum_irradiance, yday, k = 9)+
+                                 s(ptoc,yday, k = 3)" ,   # remove asp
+                     
+                     "temp_mean~ s(east,north,k = 9) + 
+                                 s(asp_c, yday,k = 9) + 
+                                  s(sum_irradiance, yday, k = 9)+
+                                 s(tpi, yday,k = 9)+
+                                 s(ptoc,yday, k = 3) ", # remove dem
+                     
+                     "temp_mean~ s(dem, yday,k = 9)  + 
+                                 s(asp_c, yday,k = 9) + 
+                                 s(sum_irradiance, yday, k = 9)+
+                                 s(tpi, yday,k = 9)+
+                                 s(ptoc,yday, k = 3) ", # remove EN
+                     
+                     "temp_mean~ s(east,north,k = 9) + 
+                                      s(dem, yday,k = 9) +
+                                      s(asp_c, yday,k = 9) +
+                                      s(tpi, yday,k = 9) +
+                                     s(ptoc,yday, k = 3)" # remove si
+)
+
+alt_formula_list <- list("temp_mean~ s(east,north,k = 9) + 
+                                      s(dem, yday,k = 9) +
+                                      s(asp_c, yday,k = 9) +
+                                      s(tpi, yday,k = 9) +
+                                     s(ptoc,yday, k = 3)", # all
+                         
+                      "temp_mean~ s(east,north,k = 9) + 
+                                  s(dem, yday,k = 9) +
+                                  s(asp_c, yday,k = 9) + 
+                                  s(tpi, yday,k = 9) ", # remove ptoc
+                      
+                     "temp_mean~ s(east,north,k = 9) + 
+                                 s(dem, yday,k = 9)  +
+                                 s(asp_c, yday,k = 9) +
+                                 s(ptoc,yday, k = 3)", # remove tpi
+                     
+                     "temp_mean~ s(east,north,k = 9) + 
+                                 s(dem, yday,k = 9)  +
+                                 s(tpi, yday,k = 9) + 
+                                 s(ptoc,yday, k = 3)" ,   # remove asp
+                     
+                     "temp_mean~ s(east,north,k = 9) + 
+                                 s(asp_c, yday,k = 9) + 
+                                 s(tpi, yday,k = 9) +
+                                 s(ptoc,yday, k = 3)", # remove dem
+                     
+                     "temp_mean~ s(dem, yday,k = 9)  + 
+                                 s(asp_c, yday,k = 9) + 
+                                 s(tpi, yday,k = 9)+
+                                 s(ptoc,yday, k = 3) ", # remove en
+                     
+                     "temp_mean~ s(east,north,k = 9) + 
+                                 s(dem, yday,k = 9)  +
+                                 s(asp_c, yday,k = 9) +
+                                 s(tpi, yday,k = 9) +
+                                 s(ptoc,yday, k = 3)" # remove si
+                     )
+
+# Create list of three dataframes
+val_df_list<- list()
+# Loop over each option: min, max and mean
+for(i in seq_along(formula_list)){
+    val_df_list[[i]] <- validate_weekly_GAMs(model_stations_df = model_stations_df,
+                                            val_stations_df = val_stations_df,
+                                            years = 2012,
+                                            weeks = 1:52,
+                                            formula = formula_list[[i]],
+                                            alt_formula = alt_formula_list[[i]]
+                                            ) 
+    print(formula_list[[i]])
+    if(i == 1){val_df_list[[i]]$model_opt <- "all"}
+    if(i == 2){val_df_list[[i]]$model_opt <- "no ptoc"}
+    if(i == 3){val_df_list[[i]]$model_opt <- "no tpi"}
+    if(i == 4){val_df_list[[i]]$model_opt <- "no asp"}
+    if(i == 5){val_df_list[[i]]$model_opt <- "no dem"}
+    if(i == 6){val_df_list[[i]]$model_opt <- "no EN"}
+    if(i == 7){val_df_list[[i]]$model_opt <- "no solar"}
+}
+
+val_df.4 <- dplyr::bind_rows(val_df_list)
+```
+ 
+ 
+ 
+```{r message=FALSE, warning=FALSE}
+
+ggplot(data = val_df.4, mapping = aes(x = week, y = gcv)) +
+  geom_jitter(aes(colour = model_opt)) +
+  #geom_smooth() +
+  facet_wrap(~model_opt)+
+  theme(legend.position = "none")+
+  xlab("Week of 2012") +
+  ylab("Absolute Residual Values") 
+
+ggplot(data = val_df.4, mapping = aes(x = week, y = gcv)) +
+  geom_jitter(aes(colour = model_opt)) +
+  geom_smooth()+
+  facet_wrap(~model_opt, scale = "free")+
+  theme(legend.position = "none")+
+  xlab("Week of 2012") +
+  ylab("GCV Scores")
+
+ggplot(data = val_df.4, mapping = aes(x = abs_resid)) +
+  geom_histogram(aes(fill = model_opt), colour = "grey") +
+  facet_wrap(~model_opt, scale = "free") +
+  theme(legend.position = "none")+
+  xlab("Week of 2012") +
+  ylab("Absolute Residual Values")
+
+val_df.5 <- filter(val_df.4, model_opt != "no tpi")
+ggplot(data = val_df.5, mapping = aes(x = week, y = gcv)) +
+  geom_jitter(aes(colour = model_opt)) +
+  #geom_smooth() +
+  facet_wrap(~model_opt)+
+  theme(legend.position = "none")+
+  xlab("Week of 2012") +
+  ylab("Absolute Residual Values") 
+```
