@@ -16,8 +16,7 @@ end_date   = ymd('2017-12-31')
 df <- filter(model_stations_df,
              date_time >= start_date &
                date_time <= end_date)
-df <- df %>% filter(date_time != ymd('2012-12-31'),
-                    week != 53)
+
 
 
 # store all summaries
