@@ -41,7 +41,8 @@ generate_gdd_output <- function(daily_average_rasters_df,
   # Apply growing season restriction of april - november (inclusive)
   if(growing_season == TRUE){
     daily_average_rasters_df <- daily_average_rasters_df %>%
-      dplyr::filter(between(month, 4, 11))
+      dplyr::filter(between(month, 4, 12)) # last number isn't included
+                                           # apr 1st - nov 30th
     print(unique(daily_average_rasters_df$month))
   }
   
@@ -86,6 +87,10 @@ generate_gdd_output <- function(daily_average_rasters_df,
               } else if(output_time_slice == "monthly"){
               # check if last of month
                   if(day(date_now) == lubridate::days_in_month(date_now)[[1]]){
+                    writeGDDout(gdd_out, output_time_slice, gdd_base, date_now, plot_gdd_raster,
+                                output_folder, output_format) 
+                    # add an else if for case of December 29th, last day in week 52
+                  }else if(day(date_now) == 29 & month(date_now) == 12){
                     writeGDDout(gdd_out, output_time_slice, gdd_base, date_now, plot_gdd_raster,
                                 output_folder, output_format) 
                   }

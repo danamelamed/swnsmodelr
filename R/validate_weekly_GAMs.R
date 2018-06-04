@@ -18,6 +18,7 @@ validate_weekly_GAMs <-  function(model_stations_df,
   
   # List of annual dataframes
   weekly_res_years <- list()
+  alt_formula_weeks <- list()
   # Loop through years
   for(j in seq_along(years)){
     
@@ -38,11 +39,12 @@ validate_weekly_GAMs <-  function(model_stations_df,
       # The model will fail if insufficient sum_irradiance has been extracted
       # The logic below will model without sum_irradiance in that case
       
-      m <- gam(formula(formula), data = weekly_df,  na.action = na.omit)
+      m <-try( gam(formula(formula), data = weekly_df,  na.action = na.omit))
    
       if("try-error" %in% class(m)){
        m <- gam(formula(alt_formula), data = weekly_df, na.action = na.omit)
-        
+        alt_formula_weeks[[length(alt_formula_weeks)+1]] <- paste(years[[j]],weeks[[i]],sep = "-")
+        print(alt_formula_weeks)
       }
       
       if(verbose == TRUE){
@@ -55,6 +57,10 @@ validate_weekly_GAMs <-  function(model_stations_df,
       weekly_res[[i]]$rsq <- summary(m)[[10]]
       weekly_res[[i]]$dev <- summary(m)[[14]]
       weekly_res[[i]]$abs_resid <- abs(weekly_res[[i]]$resid)
+      for(l in seq_along(summary(m)[[7]])){
+        weekly_res[[i]]$var_pval <- summary(m)[[8]][[l]]
+        names(weekly_res[[i]])[names(weekly_res[[i]]) == "var_pval"] <- names(summary(m)[[7]])[[l]]
+      }
     }
     
     # Bind weekly dataframes into annual

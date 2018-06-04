@@ -2,6 +2,7 @@
 #' @param raster A daily average raster
 #' @param gdd_base The set base temperature for setting GDD
 #' @return The raster with the gdd_base subtracted, and all negatives set to 0
+#' @export
 
 apply_gdd_base <- function(raster, gdd_base){
   raster_out <- raster - gdd_base

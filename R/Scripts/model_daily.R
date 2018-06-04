@@ -2,7 +2,7 @@
 
 # Make weekly models for mean temperature modelling
 
-start_date = ymd('2012-01-01')
+start_date = ymd('2017-04-26')
 end_date   = ymd('2017-12-31')
 
 
@@ -23,7 +23,7 @@ df <- filter(model_stations_df,
 summaries <- list()
 summaries2 <- list() #without solar irradiace
 
-years <- 2012:2014
+years <- 2017
 n_years <- years %>% length()
 
 no_sol_model <- list()
@@ -49,29 +49,29 @@ for(j in 1:n_years){
     # Because of that process, an error may error in generating the model.
     # If it does, a back-up model without sum_irradiance is run
     m <- try(gam(temp_mean ~
-                   s(east,north, k=9) +
-                   s(dem, k=9) +
-                   s(sum_irradiance, k=9) +
-                   s(tpi, k=9) +
+                   s(east,north) +
+                   s(dem) +
+                   s(sum_irradiance) +
+                  # s(tpi, k=9) +
                    s(ptoc, k= 3) ,
                   # s(asp_c, k= 9),
                  data = daily_df))
     # Back-up model
     if("try-error" %in% class(m)){
       m <- gam(temp_mean ~
-                 s(east,north, k=9) +
+                 s(east,north) +
                  s(dem, k=9) +
                  # s(sum_irradiance) +
-                 s(tpi, k=9) +
-                 s(ptoc, k=3) ,
+                # s(tpi, k=9) +
+                 s(ptoc) ,
                #  s(asp_c, k= 9),
                data = daily_df)}
     # No temporal raster available
     m2 <- gam(temp_mean ~
-                s(east,north, k=9) +
-                s(dem, k=9) +
+                s(east,north) +
+                s(dem) +
                 #  s(sum_irradiance) +
-                s(tpi, k=9) +
+              #  s(tpi, k=9) +
                 s(ptoc, k=3) ,
              #   s(asp_c, k= 9),
               data = daily_df)
@@ -107,7 +107,7 @@ for(j in 1:n_years){
         plot(prediction_raster)
         
         # output prediction temp mean raster
-        writeRaster(prediction_raster, paste0("Z:\\Dana\\Daily\\Daily_Temp_Mean_200\\temp_mean",
+        writeRaster(prediction_raster, paste0("Z:\\Dana\\Daily\\Daily_Temp_Mean_200_2\\temp_mean",
                                               date_now,".tif"),
                     overwrite = TRUE)
       }else{
@@ -117,7 +117,7 @@ for(j in 1:n_years){
         plot(prediction_raster)
         
         # output prediction temp mean raster
-        writeRaster(prediction_raster, paste0("Z:\\Dana\\Daily\\Daily_Temp_Mean_200\\temp_mean",
+        writeRaster(prediction_raster, paste0("Z:\\Dana\\Daily\\Daily_Temp_Mean_200_2\\temp_mean",
                                               date_now,".tif"),
                     overwrite = TRUE)
         no_sol_model[[length(no_sol_model) + 1]] <- date_now
@@ -129,10 +129,10 @@ for(j in 1:n_years){
   
 }
 
-start_date = ymd('2017-01-01')
-end_date = ymd('2017-12-31')
+start_date = ymd('2012-01-01')
+end_date = ymd('2014-12-31')
 # Create GDDs
-temp_mean_df <- make_temporal_raster_df("Z:\\Dana\\Daily\\Daily_Temp_Mean_200",
+temp_mean_df <- make_temporal_raster_df("Z:\\Dana\\Weekly\\Daily_Temp_Mean_200_7",
                                         start_date,
                                         end_date,
                                         date_chars = c(10,19),
@@ -144,7 +144,7 @@ generate_gdd_output(temp_mean_df,
                     end_date = end_date,
                     output_time_slice = "monthly",
                     growing_season = TRUE,
-                    output_folder = "Z:\\Dana\\ProjectOutputs\\MonthlyGDD5_GrowingSeasons",
+                    output_folder = "Z:\\Dana\\Weekly\\Monthly_GDD_200_7",
                     plot_gdd_raster = TRUE)
 
 ext_df <- extract_dated_rasters_stations(ext_df, temp_mean_df)
