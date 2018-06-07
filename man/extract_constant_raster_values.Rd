@@ -4,8 +4,7 @@
 \alias{extract_constant_raster_values}
 \title{Extracts constant raster values to daily temperatures table}
 \usage{
-extract_constant_raster_values(temperatures_df, rasters_list,
-  stations = stations_sp)
+extract_constant_raster_values(temperatures_df, rasters_list)
 }
 \arguments{
 \item{temperatures_df}{a dataframe of temperature data. Must contain 'stationid' field}

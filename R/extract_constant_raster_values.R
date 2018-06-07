@@ -8,8 +8,11 @@
 #' @return input temperatures_df with added columns, one for each raster in rasters_list
 #' @export
 extract_constant_raster_values <- function(temperatures_df,
-                                           rasters_list, 
-                                           stations = stations_sp){
+                                           rasters_list){
+  stations <- temperatures_df %>% 
+    filter(!duplicated(stationid)) %>%
+    dplyr::select(stationid, EASTING, NORTHING)
+  coordinates(stations) = ~ EASTING + NORTHING
   
   # Loop through each raster in list
   for(i in seq_along(rasters_list)){

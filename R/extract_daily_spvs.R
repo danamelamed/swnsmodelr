@@ -1,3 +1,5 @@
+#'
+#'@export
 extract_daily_spvs  <- function(df,
                              dep_vars,
                              ind_vars,

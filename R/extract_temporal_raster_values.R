@@ -4,9 +4,11 @@
 extract_temporal_raster_values <- function(temporal_rasters_df, 
                                            temperatures_df,
                                            col_name = "temporal_raster_value",
-                                           stations = stations_sp,
                                            verbose  = TRUE){
-  
+  stations <- temperatures_df %>% 
+    filter(!duplicated(stationid)) %>%
+    dplyr::select(stationid, EASTING, NORTHING)
+  coordinates(stations) = ~ EASTING + NORTHING
   # Arrange by date
   temporal_rasters_df <- temporal_rasters_df %>%
     dplyr::arrange(date_time)

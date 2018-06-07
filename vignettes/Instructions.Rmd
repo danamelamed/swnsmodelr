@@ -1,0 +1,186 @@
+---
+title: "swnsmodelr R Package"
+author: "Dana Melamed"
+date: "June 7, 2018"
+output:
+  rmarkdown::word_document:
+    fig_caption: yes
+indent: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(swnsmodelr)
+library(ggplot2)
+```
+
+## Introduction
+
+  The swnsmodelr package was designed for users to easily model SWNS weather station data with rasters and models of their chosing. The package contains functions and weather station data, and input rasters are contained within the package's R project. 
+  This document follows a workflow of preparing data, generating models, and generating outputs. The objects generated at the various steps in the example are stored in swnsmodelr. 
+
+
+
+## Exract Rasters to Weather Station Data
+
+  The first step in modelling weather station data with rasters is to extract raster values to corresponding weather station records.  For many rasters, (ex: elevation, proximity to coast, aspect) the value will be same every day for a station. Other rasters (ex: solar radiation) change on a temporal basis, and will have a unique value for each station every day. The two type of rasters, constant, and temporally changing, will be treated differently in the value extract process.
+
+### Weather Stations Data Frame
+  The data frame, `swns_stations_df`, stored within swnsmodelr, contains SWNS daily temperature data from 2012 - 2017. The data frame has columns for: station I.D. (`stationid`), date (`date_time`), minimum temperature (`temp_min`), maximum temperature (`temp_max`), and mean temperature (`temp_mean`). One row of data represents one daily record for one station. Use `str()`, to see the column names and variables types. 
+  
+```{r message=FALSE, warning=FALSE}
+str(swns_stations_df)
+```
+
+
+### Constant Rasters
+
+  The constant rasters should be stored as a list of raster objects. The code below is an example of how to create a list of raster objects from rasters available in the package project. The rasters are from the `200` subdirectory within the `Rasters` folder. In this subdirectory, rasters have a spatial resolution of 200m.  
+```{r message=FALSE, warning=FALSE, fig.height = 5, fig.width= 7}
+# Names of rasters in Rasters directory (everything before extension)
+rasters_names_list <- list("dem",  # elevation
+                          "ptoc", # proxmity to coast
+                          "east", # easting
+                          "north",# northing
+                          "asp",  # aspect
+                           "tpi", # topographic position index
+                          "slope") # slope
+# Make into rasters objects list
+rasters_list <- lapply(FUN = raster,
+                       X   = paste0("F:\\Packages\\swnsmodelr\\Rasters\\200\\",rasters_names_list, ".tif"))
+
+# Plot brick of rasters
+rasters_list %>% brick() %>% plot()
+
+
+```
+
+  The constant raster values are added to the `swns_stations_df` table with  `extract_constant_rasters_values()`.  A new frame will be made called `swns_stations_df_cr`, which is the original table plus constant raster values.
+```{r message=FALSE, warning=FALSE}
+swns_stations_df_cr <- extract_constant_raster_values(swns_stations_df, rasters_list)
+str(swns_stations_df_cr)
+```
+
+
+### Temporally Changing Rasters
+
+  In this modelling procedure, a solar radiation raster for each day is used an input into the model. The large quantity of rasters makes it problematic to store rasters as a list of raster objects, as with the constant rasters. To overcome this issue, there are two steps to adding temporally changing rasters to `swns_stations_df`. 
+  In the first step, the file path to each raster is stored as a row in a new dataframe. The date is then parsed from the file path name, to a new column of corresponding dates. This way, rasters can be selected and converted to rasters objects based on dates. The data frame, referred to as a 'temporal rasters data frame', is made with `make_temporal_rasters_df()`. The user must define the "date characters" or `date_chars` argrument, which is the index of characters that contain the date in each file path. The date format (`date_format` agrument) must also be defined (see ?as.Date). The user also defines a start and end date of rasters to include, and the extension of the rasters. 
+  Using the file "Sum_Irradiance_2012_1.tif" as an example: the date is formed with the characters 16 to -5, and the format is "%Y_%j". A sample use of the function for the solar radiation rasters is shown below:
+  
+```{r message=FALSE, warning=FALSE}
+solar_irradiance_rasters_df <- make_temporal_raster_df(
+  in_folder = "F:\\GOES_200",
+  start_date = ymd('2012-01-01'),
+  end_date   = ymd('2017-12-31'),
+  date_chars = c(16,-5),
+  date_format = "%Y_%j",
+  extension = ".tif")
+
+head(solar_irradiance_rasters_df)
+```
+
+Finally, to add the values of each temporal raster to the weather station data, use `extract_temporal_raster_values()`. This may take a while if there are many temporal rasters. The function add a column for the set of temporally changing rasters. The argument `col_name` is used to specify the name of the column. By setting `verbose` to true, the function will print a completion report for every raster that has been succesfully extracted to the weather stations data frame. The output data frame was named `swns_stations_df_200`, because it has the raster values extracted from 200m resolution.
+
+```{r eval=FALSE, echo=TRUE, message=FALSE, warning=FALSE}
+
+swns_stations_df_200  <- extract_temporal_raster_values(temporal_rasters_df = solar_irradiance_rasters_df,
+                               temperatures_df = swns_stations_df_cr,
+                               col_name = "sum_irradiance",
+                               verbose = FALSE)
+```
+
+
+```{r}
+head(swns_stations_df_200)
+```
+
+
+
+## Separate Stations into Modelling and Validating Stations
+ There are weather stations from AGRG (study stations), ECAN and DNR (external stations) in the data frame. Ideally, the study stations would be used to model the data, and the external stations to validate the models.   To be able to differeniate at any time between study (AGRG) and external (ECAN and DNR) stations, the station I.D.'s were sorted into two lists: `study_stations_list` and `ext_stations_list`. In the code below, the lists were used to separate the stations, and they were plotted to show their locations. 
+
+```{r fig.hold=TRUE, message=FALSE, warning=FALSE,height = 7, fig.width= 7}
+ggplot(data = swns_stations_df %>%
+         filter(!duplicated(stationid)) %>%
+         dplyr::mutate(origin = if_else(stationid %in% study_stations_list,
+                                                               "study",
+                                                               "ext"))) +
+  geom_point(aes(x = EASTING, y = NORTHING, colour = origin)) +
+  coord_fixed()
+
+```
+  
+
+The study stations alone do not provide sufficient coverage in the eastern most portion surrounding the Halifax area, and the Annapolis valley. There are external stations in those areas which were included in the model stations along with the study stations. The external stations that were included as model stations were '6354' in Greenwood, '6456' north is St. Margaret's Bay, '47187' in Halifax, 'DN025' south of Digby and '6497' near Berwick. A  number of study stations were used in validating the models rather than generating them, these stations were: "YA4","S160","AN3","CL4","KE5","WE5","WE2","LI2","CH4". These stations are located in areas represented by model stations but not so close that their modelling values were essentially the same.
+
+
+The following code was used to separate the stations, and can be easily altered to exclude or include stations in either category:
+```{r}
+# Choose modelling stations
+model_stations_df <- swns_stations_df_200 %>%
+          # 1. Include all study stations
+  filter(stationid %in% study_stations_list |
+          # 2. Included these ext stations
+          stationid %in% c("6354","47187","6456","DNR025","6497")) %>% 
+          # 3. Remove these study stations
+  filter((stationid %in% c("YA4","S160","AN3","CL4","KE5","WE5","WE2","LI2","CH4")) == FALSE)
+
+# Choose validation stations
+val_stations_df   <- swns_stations_df_200 %>% 
+          # 1. Include all ext stations
+  filter(stationid %in% ext_stations_list  |    
+          # 2. Add these study stations
+           stationid %in% c("YA4","S160","AN3","CL4","KE5","WE5","WE2","LI2","CH4")) %>%
+          # 3. Remove these ext stations
+  filter(!(stationid %in% c("6354", "47187", "6456","27141", "DLG006", "DNR024",
+                            "6501", "DNR025", "DNR003", "6497")             
+           )
+         ) 
+```
+
+This is the resulting modelling and validation stations:
+
+```{r fig.hold=TRUE, message=FALSE, warning=FALSE,height = 7, fig.width= 7}
+ggplot(data = swns_stations_df %>%
+         filter(!duplicated(stationid)) %>%
+         dplyr::mutate(role = if_else(stationid %in% unique(model_stations_df$stationid),
+                                                               "model",
+                                                               "validate"))) +
+  geom_point(aes(x = EASTING, y = NORTHING, colour = role)) +
+  coord_fixed()
+
+```
+
+## Examine Raster Variable Relationship with Weather Station Temperature
+
+
+### Weather Station Coverage of Raster Variability
+```{r, message=FALSE, warning=FALSE, fig.height = 5, fig.width= 7}
+model_stations_sp <- model_stations_df %>% 
+  filter(!duplicated(stationid)) %>%
+  dplyr::select(stationid, EASTING, NORTHING)
+coordinates(model_stations_sp) = ~ EASTING + NORTHING
+
+par(mfrow = c(2,2))
+for(i in seq_along(rasters_list)){
+  raster_values <- raster::extract(rasters_list[[i]], model_stations_sp) 
+  plot(x = 1:(length(raster_values)),
+       y = raster_values[sort.list(raster_values)], 
+       ylab = names(rasters_list[[i]]),
+       xlab = "Stations")
+
+  
+}
+```
+
+
+### Test Dependent Variable/Independent Variable Combinations at Different Timeframes
+
+Functions were written to test the correlation between dependent and independent variables one on one, at different time frames. The functions extract the smooth parameter p-values from the model. 
+
+```{r}
+# daily_spvs_df <- extract_daily_spvs(swns_stations_df_200)
+```
+
+
