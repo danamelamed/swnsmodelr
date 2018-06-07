@@ -55,10 +55,10 @@ rasters_list %>% brick() %>% plot()
 
 ```
 
-  The constant raster values are added to the `swns_stations_df` table with  `extract_constant_rasters_values()`.  A new frame will be made called `swns_stations_df_cr`, which is the original table plus constant raster values.
+  The constant raster values are added to the `swns_stations_df` table with  `extract_constant_rasters_values()`.  A new frame will be made called `swns_stations_df_200`, which is the original table plus constant raster values at 200m resolution
 ```{r message=FALSE, warning=FALSE}
-swns_stations_df_cr <- extract_constant_raster_values(swns_stations_df, rasters_list)
-str(swns_stations_df_cr)
+swns_stations_df_200 <- extract_constant_raster_values(swns_stations_df, rasters_list)
+str(swns_stations_df_200)
 ```
 
 
@@ -180,7 +180,12 @@ for(i in seq_along(rasters_list)){
 Functions were written to test the correlation between dependent and independent variables one on one, at different time frames. The functions extract the smooth parameter p-values from the model. 
 
 ```{r}
-# daily_spvs_df <- extract_daily_spvs(swns_stations_df_200)
+daily_spvs_df <- extract_daily_spvs(swns_stations_df_200,
+                                    "dem",
+                                    "temp_mean",
+                                    2012,
+                                    1:20)
+head(daily_spvs_df)
 ```
 
 
