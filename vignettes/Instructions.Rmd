@@ -1,5 +1,5 @@
 ---
-title: "swnsmodelr R Package"
+title: "swnsmodelr R Package Manual"
 author: "Dana Melamed"
 date: "June 7, 2018"
 output:
@@ -47,7 +47,7 @@ rasters_names_list <- list("dem",  # elevation
                           "slope") # slope
 # Make into rasters objects list
 rasters_list <- lapply(FUN = raster,
-                       X   = paste0("F:\\Packages\\swnsmodelr\\Rasters\\200\\",rasters_names_list, ".tif"))
+                       X   = paste0("E:\\Packages\\swnsmodelr\\Rasters\\200\\",rasters_names_list, ".tif"))
 
 # Plot brick of rasters
 rasters_list %>% brick() %>% plot()
@@ -70,9 +70,9 @@ str(swns_stations_df_200)
   
 ```{r message=FALSE, warning=FALSE}
 solar_irradiance_rasters_df <- make_temporal_raster_df(
-  in_folder = "F:\\GOES_200",
+  in_folder = "E:\\GOES_200",
   start_date = ymd('2012-01-01'),
-  end_date   = ymd('2017-12-31'),
+  end_date   = ymd('2012-12-31'),
   date_chars = c(16,-5),
   date_format = "%Y_%j",
   extension = ".tif")
@@ -82,10 +82,10 @@ head(solar_irradiance_rasters_df)
 
 Finally, to add the values of each temporal raster to the weather station data, use `extract_temporal_raster_values()`. This may take a while if there are many temporal rasters. The function add a column for the set of temporally changing rasters. The argument `col_name` is used to specify the name of the column. By setting `verbose` to true, the function will print a completion report for every raster that has been succesfully extracted to the weather stations data frame. The output data frame was named `swns_stations_df_200`, because it has the raster values extracted from 200m resolution.
 
-```{r eval=FALSE, echo=TRUE, message=FALSE, warning=FALSE}
+```{r eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
 
 swns_stations_df_200  <- extract_temporal_raster_values(temporal_rasters_df = solar_irradiance_rasters_df,
-                               temperatures_df = swns_stations_df_cr,
+                               temperatures_df = swns_stations_df_200,
                                col_name = "sum_irradiance",
                                verbose = FALSE)
 ```
@@ -177,15 +177,97 @@ for(i in seq_along(rasters_list)){
 
 ### Test Dependent Variable/Independent Variable Combinations at Different Timeframes
 
-Functions were written to test the correlation between dependent and independent variables one on one, at different time frames. The functions extract the smooth parameter p-values from the model. 
+In the `swns_stations_df_200` data frame there are three dependent variables: daily minimum, maxmimum, and mean temperatures, and seven independent variables extracted from rasters. Functions were written to model dependent and independent variables one-on-one, to see the individual relationships. A function was written for the daily, weekly, and monthly timeframes: `extract_daily_spvs()`, `extract_weekly_spvs`, `extract_monthly_spvs`. The term "spvs" refers to "smooth term p-values". 
+The functions a data frame that is similar to the input data frame, with three added columns: `ind_var` and `dep_var`, which specify which columns in the row were used as independent and dependent variables, respectively; and `pval`, which is the p-value from the smooth term in the GAM. 
 
-```{r}
-daily_spvs_df <- extract_daily_spvs(swns_stations_df_200,
-                                    "dem",
-                                    "temp_mean",
-                                    2012,
-                                    1:20)
-head(daily_spvs_df)
+A sample of using the three functions, and plotting their results, are in the code examples below.
+
+```{r message=FALSE, warning=FALSE}
+swns_stations_df_200 <- add_date_columns(swns_stations_df_200)
+daily_spvs_df <- extract_daily_spvs(swns_stations_df_200, # data frame
+                                    c("temp_min","temp_max",
+                                      "temp_mean"),          # dependent variables
+                                    c("dem","asp","slope","tpi","ptoc",
+                                      "sum_irradiance","east, north"), #independent variables
+                                    2012, # year
+                                    1:10) # days in the year (ex: 1:365)
+ggplot(data = daily_spvs_df, aes(x = yday, y = pval)) +
+  geom_smooth(aes(colour = ind_var)) +
+  facet_wrap(~dep_var, ncol = 1) +
+  labs(x = "Day of the Year - 2012", y = "P-Value",
+       title = "Daily Timeframe",
+       colour = "Independent \n Variable")
 ```
 
+```{r message=FALSE, warning=FALSE}
+swns_stations_df_200 <- add_date_columns(swns_stations_df_200)
+daily_spvs_df <- extract_weekly_spvs(swns_stations_df_200, # data frame
+                                    c("temp_min","temp_max",
+                                      "temp_mean"),          # dependent variables
+                                    c("dem","asp","slope","tpi","ptoc",
+                                      "sum_irradiance","east, north"), #independent variables
+                                    2012, # year
+                                    1:10) # weeks in the year (ex: 1:52)
+ggplot(data = daily_spvs_df, aes(x = yday, y = pval)) +
+  geom_smooth(aes(colour = ind_var)) +
+  facet_wrap(~dep_var, ncol = 1) +
+  labs(x = "Day of the Year - 2012", y = "P-Value",
+       title = "Weekly Timeframe",
+       colour = "Independent \n Variable")
+```
+
+
+```{r, eval = FALSE, message=FALSE, warning=FALSE}
+swns_stations_df_200 <- add_date_columns(swns_stations_df_200)
+daily_spvs_df <- extract_monthly_spvs(swns_stations_df_200, # data frame
+                                    c("temp_min","temp_max",
+                                      "temp_mean"),          # dependent variables
+                                    c("dem","asp","tpi","ptoc",
+                                      "sum_irradiance","east, north"), #independent variables
+                                    2012, # year
+                                    1) # months in the year (ex: 1:365)
+ggplot(data = daily_spvs_df, aes(x = yday, y = pval)) +
+  geom_smooth(aes(colour = ind_var)) +
+  facet_wrap(~dep_var, ncol = 1) +
+  labs(x = "Day of the Year - 2012", y = "P-Value",
+       title = "Monthly Timeframe",
+       colour = "Independent \n Variable")
+```
+
+## Generate and Validate Models 
+
+A set of functions in `swnsmodelr` generate GAMs based on a model station data, then apply the models to validation station data, and computes the error at each validation record. The output from the functions is the validation station data frame with columns for the error (`resid`), GCV score(`gcv`), and adjusted R square () added. There is a function written for the three timeframes, daily, weekly, and monthly, respectively: `validate_daily_GAMs()`, `validate_weekly_GAMs()`, `validate_monthly_GAMs()`.
+
+The functions allow the user to specify an alternative formula, with the argument `alt_formula`. This feature was specifically implemented for the case that solar radiation data is missing for a particular date. The function will fail if the data is missing, and fall back on the alternative formula. If there is no suspiscion that a missing variable will cause the function to fail, this argument can be left blank. 
+
+```{r}
+daily_val_df <- validate_daily_GAMs(model_stations_df,
+                                     val_stations_df,
+                                     years = 2012,
+                                     days = 1:3,
+                                    formula = "temp_mean ~ s(dem) + s(asp) + s(tpi) 
+                                    + s(ptoc, k= 3) + s(east,north) + s(sum_irradiance)",
+                                    alt_formula ="temp_mean ~ s(dem) + s(asp) + s(tpi) 
+                                    + s(ptoc, k = 3) + s(east,north)")
+```
+
+
+Two ways of visualizing the errors are by histogram, and a scatterplot against the dependent variable.
+```{r message=FALSE, warning=FALSE}
+ggplot(data = daily_val_df, aes(resid))+
+  labs(x = "Residuals",y = "Count") +
+  geom_histogram(position = "dodge", colour = "black", fill = "pink",bins = 30)
+
+ggplot(data = daily_val_df, aes(x = temp_mean, y = resid)) +
+  geom_point() +
+  geom_smooth()
+```
+
+
+## Generating Output
+
+### Daily Mean Temperature Maps
+
+### Growing Degree Days Maps
+After selecting the model
 

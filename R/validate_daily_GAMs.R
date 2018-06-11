@@ -5,9 +5,8 @@ validate_daily_GAMs <-  function(model_stations_df,
                                    years, # list of years ex: 2012:2017
                                    days, # list of days ex: 1:52
                                    formula,
-                                   alt_formula ,
-                                   verbose = FALSE
-){
+                                   alt_formula = "",
+                                   verbose = FALSE){
   
   # Add date fields to dataframe
   model_stations_df <- add_date_columns(model_stations_df)
@@ -43,12 +42,12 @@ validate_daily_GAMs <-  function(model_stations_df,
       
       if("try-error" %in% class(m)){
         m <- gam(formula(alt_formula), data = daily_df, na.action = na.omit)
-        print("oops")
+  
      
       }
       
       if(verbose == TRUE){
-        print(m)
+        print(summary(m))
       }
       
       # Store stats
@@ -57,7 +56,6 @@ validate_daily_GAMs <-  function(model_stations_df,
       daily_res[[i]]$rsq <- summary(m)[[10]]
       daily_res[[i]]$dev <- summary(m)[[14]]
       daily_res[[i]]$abs_resid <- abs(daily_res[[i]]$resid)
-      print(summary(m))
       # get pvalues for each term
       for(l in seq_along(summary(m)[[7]])){
         daily_res[[i]]$var_pval <- summary(m)[[8]][[l]]
