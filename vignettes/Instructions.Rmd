@@ -240,7 +240,7 @@ A set of functions in `swnsmodelr` generate GAMs based on a model station data, 
 
 The functions allow the user to specify an alternative formula, with the argument `alt_formula`. This feature was specifically implemented for the case that solar radiation data is missing for a particular date. The function will fail if the data is missing, and fall back on the alternative formula. If there is no suspiscion that a missing variable will cause the function to fail, this argument can be left blank. 
 
-```{r}
+```{r echo=TRUE}
 daily_val_df <- validate_daily_GAMs(model_stations_df,
                                      val_stations_df,
                                      years = 2012,
@@ -265,9 +265,61 @@ ggplot(data = daily_val_df, aes(x = temp_mean, y = resid)) +
 
 
 ## Generating Output
+### Overview
+With the combination of a model stations data frame, model formula, and input rasters, functions in `swnsmodelr` generate different types of raster outputs.  The functions `daily_model_predict_rasters()`, and `weekly_model_predict_rasters()` generates daily rasters of the dependent variable with the specified model applied in daily or weekly timeframes, respectively. 
 
-### Daily Mean Temperature Maps
+The prediction functions will fail if the rasters in the `rasters_list`, and the rasters pointed to in the `temporal_rasters_df`, do not have the same extents, and number of rows and columns. The function `raster::compareRaster()` will be return `TRUE` for the `rasters_list` if the properties are the same. If not, the function `raster::resample()` can be used to correct the issue. 
 
-### Growing Degree Days Maps
-After selecting the model
+The function `generate_mean_rasters()`, calculates mean rasters for sets of maximum and minimum rasters that correpsond by date. This function was written incase a user would rather model daily minimum and maximum temperatures before calculating daily mean temperature. 
+
+Finally, the function `generate_output_gdd()`, generates GDD rasters from daily mean temperature rasters. The user can specify the GDD base, and frequency of outputs (daily, weekly, monthly or yearly). There is also an agrument called `growing_season` that when set to `TRUE`, only accumulates GDD for April to November.  
+
+### Predict Daily Mean Temperature Rasters
+Continuing from the previous section, the code below demonstrates how to use `daily_model_predict_rasters()`.As with the model validation, a formula and an alternative formula (`alt_formula`) can be specified. The `alt_formula` is used if the `formula` causes `gam()` to fail. This would occur is a variable is a missing for the date being modelling, which is the case randomly with `sum_irradiance`. 
+
+```{r eval = FALSE}
+
+# Predict daily mean temperature
+daily_model_predict_rasters(start_date = ymd('2012-01-01'),
+                               end_date = ymd('2017-12-31'),
+                               formula = "temp_mean ~
+                                          s(east,north) +
+                                          s(dem) +
+                                          s(sum_irradiance) +
+                                          s(ptoc, k= 3)",
+                               alt_formula = "temp_mean ~
+                                          s(east,north) +
+                                          s(dem) +
+                                          s(ptoc, k= 3)",
+                               temperatures_df = model_stations_df,
+                               input_rasters = rasters_list,
+                               temporal_rasters_df = solar_irradiance_rasters_df,
+                               output_folder = "F://daily_models//mean_temperature",
+                               output_ext = "tif",
+                               verbose = TRUE)
+```
+
+
+### Calculate Growing Degree Day (GDD) Rasters
+
+Rasters of GDD are calculated by raster algebra with the daily mean temperature rasters. The first step is to make a data frame with `make_temporal_rasters_df()` that contains the file paths to the daily mean temperature rasters, and their corresponding date.
+The function `output_gdd_rasters()` applies the specified GDD base to the mean temperature rasters, accumulates them daily, and sends them to the output folder at the specified timeframe, `output_timeframe`. The accumulation only occurs within a year, and can be set to only include April 1st - November 30th by setting `growing_season` to `TRUE`. The code below demonstrates how to use the two functions to generate GDD rasters.
+
+```{r eval = FALSE}
+temp_mean_df <- make_temporal_raster_df("F://daily_models//mean_temperature",
+                                        start_date = ymd('2012-01-01'),
+                                        end_date   = ymd('2017-12-31'),
+                                        date_chars = c(10,19),
+                                        date_format = "%Y-%m-%d")
+
+generate_gdd_output(temp_mean_df,
+                    gdd_base = 5,
+                    start_date = start_date,
+                    end_date = end_date,
+                    output_time_slice = "monthly",
+                    growing_season = TRUE,
+                    output_folder = "Z:\\Dana\\Weekly\\Monthly_GDD_200_7",
+                    plot_gdd_raster = TRUE)
+```
+
 
