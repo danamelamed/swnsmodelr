@@ -5,7 +5,7 @@
 \title{Generates accumulated GDD output rasters}
 \usage{
 generate_gdd_output(daily_average_rasters_df, gdd_base, start_date, end_date,
-  output_time_slice, growing_season = TRUE, output_folder,
+  output_timeframe, growing_season = TRUE, output_folder,
   output_format = "GTiff", plot_gdd_raster = FALSE)
 }
 \arguments{
@@ -18,7 +18,7 @@ on the generated daily averages}
 
 \item{end_date}{The last date to include in GDD calculations}
 
-\item{output_time_slice}{The time slice of GDD rasters that will be outputted.
+\item{output_timeframe}{The time slice of GDD rasters that will be outputted.
 With "daily", all daily GDDs rasters are written; "weekly", a GDD raster is
 written every sunday; "monthly" a GDD raster is written on the last day of each 
 month, "yearly" a GDD raster is written on the the last day for each year}

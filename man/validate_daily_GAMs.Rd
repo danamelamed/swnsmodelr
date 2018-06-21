@@ -5,7 +5,7 @@
 \title{Provides validation data and statistics on daily GAMs}
 \usage{
 validate_daily_GAMs(model_stations_df, val_stations_df, years, days, formula,
-  alt_formula, verbose = FALSE)
+  alt_formula = "", verbose = FALSE)
 }
 \description{
 Provides validation data and statistics on daily GAMs

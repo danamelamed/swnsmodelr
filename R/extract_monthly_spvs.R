@@ -25,6 +25,7 @@ extract_monthly_spvs <- function(df,
           ind_var_df[[k]]$ind_var <- ind_vars[[k]]
         }
         
+        print(formula)
         f <- as.formula(formula)
         
         m <- gam(f, data = df_month)

@@ -8,7 +8,7 @@
 #' @param gdd_base The base level of development for GDD equation
 #' @param start_date The starting date to include in GDD calculations
 #' @param end_date The last date to include in GDD calculations
-#' @param output_time_slice The time slice of GDD rasters that will be outputted.
+#' @param output_timeframe The time slice of GDD rasters that will be outputted.
 #' With "daily", all daily GDDs rasters are written; "weekly", a GDD raster is
 #' written every sunday; "monthly" a GDD raster is written on the last day of each 
 #' month, "yearly" a GDD raster is written on the the last day for each year
@@ -23,7 +23,7 @@ generate_gdd_output <- function(daily_average_rasters_df,
                                 gdd_base,
                                 start_date,
                                 end_date,
-                                output_time_slice,
+                                output_timeframe,
                                 growing_season = TRUE,
                                 output_folder,
                                 output_format = "GTiff",
@@ -41,9 +41,9 @@ generate_gdd_output <- function(daily_average_rasters_df,
   # Apply growing season restriction of april - november (inclusive)
   if(growing_season == TRUE){
     daily_average_rasters_df <- daily_average_rasters_df %>%
-      dplyr::filter(between(month, 4, 12)) # last number isn't included
+      dplyr::filter(between(month, 4, 11)) # last number isn't included
                                            # apr 1st - nov 30th
-    print(unique(daily_average_rasters_df$month))
+    
   }
   
   # get all years in selected dates
@@ -74,31 +74,31 @@ generate_gdd_output <- function(daily_average_rasters_df,
         for(i in 2: year_rows){
             
 
-            if(output_time_slice == "daily"){
-              writeGDDout(gdd_out, output_time_slice, gdd_base, date_now, plot_gdd_raster,
+            if(output_timeframe == "daily"){
+              writeGDDout(gdd_out, output_timeframe, gdd_base, date_now, plot_gdd_raster,
                           output_folder, output_format)  
               
-             } else if(output_time_slice == "weekly"){
+             } else if(output_timeframe == "weekly"){
               # check if first day of week (sunday)
-                  if(wday(date_now) == 1){ 
-                    writeGDDout(gdd_out, output_time_slice, gdd_base, date_now, plot_gdd_raster,
+                  if(wday(date_now) == 7){ 
+                    writeGDDout(gdd_out, output_timeframe, gdd_base, date_now, plot_gdd_raster,
                                 output_folder, output_format) 
                     }
-              } else if(output_time_slice == "monthly"){
+              } else if(output_timeframe == "monthly"){
               # check if last of month
                   if(day(date_now) == lubridate::days_in_month(date_now)[[1]]){
-                    writeGDDout(gdd_out, output_time_slice, gdd_base, date_now, plot_gdd_raster,
+                    writeGDDout(gdd_out, output_timeframe, gdd_base, date_now, plot_gdd_raster,
                                 output_folder, output_format) 
                     # add an else if for case of December 29th, last day in week 52
                   }else if(day(date_now) == 29 & month(date_now) == 12){
-                    writeGDDout(gdd_out, output_time_slice, gdd_base, date_now, plot_gdd_raster,
+                    writeGDDout(gdd_out, output_timeframe, gdd_base, date_now, plot_gdd_raster,
                                 output_folder, output_format) 
                   }
-              } else if(output_time_slice == "yearly"){
+              } else if(output_timeframe == "yearly"){
               # check if last day of year
               if(date_now == daily_average_rasters_year_now[[2]][[year_rows]])
                 
-                writeGDDout(gdd_out,output_time_slice, gdd_base, date_now, plot_gdd_raster,
+                writeGDDout(gdd_out,output_timeframe, gdd_base, date_now, plot_gdd_raster,
                             output_folder, output_format) 
             }
             

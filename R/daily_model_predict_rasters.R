@@ -136,34 +136,6 @@ predict_mean_daily_rasters <- function(start_date,
           
         }
         
-        start_date = ymd('2012-01-01')
-        end_date = ymd('2014-12-31')
-        # Create GDDs
-        temp_mean_df <- make_temporal_raster_df("Z:\\Dana\\Weekly\\Daily_Temp_Mean_200_7",
-                                                start_date,
-                                                end_date,
-                                                date_chars = c(10,19),
-                                                date_format = "%Y-%m-%d")
-        
-        generate_gdd_output(temp_mean_df,
-                            gdd_base = 5,
-                            start_date = start_date,
-                            end_date = end_date,
-                            output_time_slice = "monthly",
-                            growing_season = TRUE,
-                            output_folder = "Z:\\Dana\\Weekly\\Monthly_GDD_200_7",
-                            plot_gdd_raster = TRUE)
-        
-        ext_df <- extract_dated_rasters_stations(ext_df, temp_mean_df)
-        
-        
-        
-        models_2012_1 <- gam_models_1
-        models_2012_2 <- gam_models_2
-        
-        
-        capture.output(for (i in 1:length(models_2012_1)) print(summary(models_2012_1)),
-                       file = "F:\\test.txt")
         
         
         
@@ -172,22 +144,3 @@ predict_mean_daily_rasters <- function(start_date,
 
 
 
-# example code for script 
-
-predict_average_daily_rasters(start_date = ymd('2012-01-01'),
-                               end_date = ymd('2017-12-31'),
-                               formula = "temp_mean ~
-                                          s(east,north) +
-                                          s(dem) +
-                                          s(sum_irradiance) +
-                                          s(ptoc, k= 3)",
-                               alt_formula = "temp_mean ~
-                                          s(east,north) +
-                                          s(dem) +
-                                          s(ptoc, k= 3)",
-                               temperatures_df = model_stations_df,
-                               raster_brick = brick,
-                               temporal_rasters_df = solar_irradiance_rasters_df,
-                               output_folder = "F://daily_models//mean_temperature",
-                               output_ext = "tif",
-                               verbose = TRUE)

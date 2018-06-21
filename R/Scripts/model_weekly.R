@@ -2,8 +2,8 @@
 
 # Make weekly models for mean temperature modelling
 
-start_date = ymd('2012-01-01')
-end_date   = ymd('2014-12-31')
+start_date = ymd('2017-01-01')
+end_date   = ymd('2017-12-31')
 
 
 
@@ -18,12 +18,12 @@ df <- filter(model_stations_df,
                date_time <= end_date)
 df <- df %>% filter(week != 53)
 
-
+df <- add_date_columns(df)
 # store all summaries
 summaries <- list()
 summaries2 <- list() #without solar irradiace
 
-years <- 2012:2014
+years <- 2017
 n_years <- years %>% length()
 
 no_sol_model <- list()
@@ -108,7 +108,7 @@ for(j in 1:n_years){
         plot(prediction_raster)
         
         # output prediction temp mean raster
-        writeRaster(prediction_raster, paste0("Z:\\Dana\\Weekly\\Daily_Temp_Mean_200_7\\temp_mean",
+        writeRaster(prediction_raster, paste0("Z:\\Dana\\Weekly\\Daily_Temp_Mean_200_8\\temp_mean",
                                               date_now,".tif"),
                     overwrite = TRUE)
       }else{
@@ -118,7 +118,7 @@ for(j in 1:n_years){
         plot(prediction_raster)
         
         # output prediction temp mean raster
-        writeRaster(prediction_raster, paste0("Z:\\Dana\\Weekly\\Daily_Temp_Mean_200_7\\temp_mean",
+        writeRaster(prediction_raster, paste0("Z:\\Dana\\Weekly\\Daily_Temp_Mean_200_8\\temp_mean",
                                               date_now,".tif"),
                     overwrite = TRUE)
         no_sol_model[[length(no_sol_model) + 1]] <- date_now
@@ -133,19 +133,19 @@ for(j in 1:n_years){
 start_date = ymd('2012-01-01')
 end_date = ymd('2014-12-31')
 # Create GDDs
-temp_mean_df <- make_temporal_raster_df("Z:\\Dana\\Weekly\\Daily_Temp_Mean_200_7",
-                                        start_date,
-                                        end_date,
+temp_mean_df <- make_temporal_raster_df("Z:\\Dana\\Weekly\\Daily_Temp_Mean_200_8",
+                                        start_date = ymd('2012-01-01'),
+                                        end_date = ymd('2017-12-31'),
                                         date_chars = c(10,19),
                                         date_format = "%Y-%m-%d")
 
 generate_gdd_output(temp_mean_df,
                     gdd_base = 5,
-                    start_date = start_date,
-                    end_date = end_date,
-                    output_time_slice = "monthly",
+                    start_date = ymd('2012-01-01'),
+                    end_date = ymd('2017-12-31'),
+                    output_timeframe = "daily",
                     growing_season = TRUE,
-                    output_folder = "Z:\\Dana\\ProjectOutputs\\Monthly_GDD_200_7",
+                    output_folder = "Z:\\Dana\\Weekly\\Daily_GDD5",
                     plot_gdd_raster = TRUE)
 
 ext_df <- extract_dated_rasters_stations(ext_df, temp_mean_df)
