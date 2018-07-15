@@ -44,7 +44,7 @@ validate_weekly_GAMs <-  function(model_stations_df,
       if("try-error" %in% class(m)){
        m <- gam(formula(alt_formula), data = weekly_df, na.action = na.omit)
         alt_formula_weeks[[length(alt_formula_weeks)+1]] <- paste(years[[j]],weeks[[i]],sep = "-")
-      }
+      } 
       
       if(verbose == TRUE){
         print(m)

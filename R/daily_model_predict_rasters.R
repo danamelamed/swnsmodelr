@@ -12,7 +12,7 @@ predict_mean_daily_rasters <- function(start_date,
                                           ){
 
         
-        start_date = ymd('2017-04-26')
+        start_date = ymd('2017-01-26')
         end_date   = ymd('2017-12-31')
         
         

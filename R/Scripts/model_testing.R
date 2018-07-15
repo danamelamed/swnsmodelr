@@ -5,116 +5,88 @@ val_stations_df   <- add_date_columns(val_stations_df)
 df <- model_stations_df %>% filter(year == 2012)
 val_2012 <- val_stations_df %>% filter(year == 2012)
 #### all years and one year ##### 
+all_years <- list()
+all_years_val <- list()
+one_year <- list()
+one_year_val <- list()
 # 1: max, 2: min 3: mean
+temp_var <- list("min", "max", "mean")
+for(i in seq_along(temp_var)){
+      all_years[[i]] <- gam(formula(paste0("temp_",temp_var," ~
+                         s(dem,month) +
+                         s(ptoc,month, k= 3) +
+                         s(sum_irradiance, month) +
+                         s(tpi,month) +
+                         s(asp, month) +
+                         s(east,north) +
+                         s(week) +
+                         year")), 
+                       data = swns_stations_df_200)
+      all_years_val[[i]] <- add_residuals(val_2012, all_years[[i]])
+      all_years_val[[i]]$timeframe <- "All years"
+      all_years_val[[i]]$temp_var <- temp_var[[i]]
+      all_years_val[[i]]$gcv <- all_years[[i]]$gcv.ubre
+      all_years_val[[i]]$rsq <- summary(all_years[[i]])[[10]]
+      all_years_val[[i]]$dev <- summary(all_years[[i]])[[14]]
+      all_years_val[[i]]$abs_resid <- abs(all_years_val[[i]]$resid)
+      
+      if(is.na(all_years_val[[i]]$abs_resid)){
+        all_years[[i]] <- gam(formula(paste0("temp_",temp_var[[i]]," ~
+                         s(dem,month) +
+                         s(ptoc,month, k= 3) +
+                         s(tpi,month)+
+                         s(asp, month) +
+                         s(east,north) +
+                         s(week) +
+                         year")), 
+                              data = swns_stations_df_200)
+        all_years_val[[i]] <- add_residuals(val_2012, all_years[[i]])
+        all_years_val[[i]]$timeframe <- "All years"
+        all_years_val[[i]]$temp_var <- temp_var[[i]]
+        all_years_val[[i]]$gcv <- all_years[[i]]$gcv.ubre
+        all_years_val[[i]]$rsq <- summary(all_years[[i]])[[10]]
+        all_years_val[[i]]$dev <- summary(all_years[[i]])[[14]]
+        all_years_val[[i]]$abs_resid <- abs(all_years_val[[i]]$resid)
+      }
+      
+      one_year[[i]] <- gam(formula(paste0("temp_",temp_var[[i]]," ~
+                        s(dem,week) +
+                        s(ptoc,week, k= 3)+
+                        s(sum_irradiance, week) +
+                        s(tpi,week)+
+                        s(asp, week) +
+                        s(east,week) +
+                        s(yday) +
+                        month")), 
+                      data = df)
+      one_year_val[[i]] <- add_residuals(val_2012, one_year[[i]])
+      one_year_val[[i]]$timeframe <- "Yearly"
+      one_year_val[[i]]$temp_var <- temp_var[[i]]
+      one_year_val[[i]]$gcv <- one_year[[i]]$gcv.ubre
+      one_year_val[[i]]$rsq <- summary(one_year[[i]])[[10]]
+      one_year_val[[i]]$dev <- summary(one_year[[i]])[[14]]
+      one_year_val[[i]]$abs_resid <- abs(one_year_val[[i]]$resid)
+      
+      if(is.na(one_year_val[[i]]$abs_resid)){
+        one_year[[i]] <- gam(formula(paste0("temp_",temp_var[[i]]," ~
+                        s(dem,week) +
+                                    s(ptoc,week, k= 3)+
+                                    s(tpi,week)+
+                                    s(asp, week) +
+                                    s(east,week) +
+                                    s(yday) +
+                                    month")), 
+                             data = df)
+        one_year_val[[i]] <- add_residuals(val_2012, one_year[[i]])
+        one_year_val[[i]]$timeframe <- "Yearly"
+        one_year_val[[i]]$temp_var <- temp_var[[i]]
+        one_year_val[[i]]$gcv <- one_year[[i]]$gcv.ubre
+        one_year_val[[i]]$rsq <- summary(one_year[[i]])[[10]]
+        one_year_val[[i]]$dev <- summary(one_year[[i]])[[14]]
+        one_year_val[[i]]$abs_resid <- abs(one_year_val[[i]]$resid)
+      }
 
-all_years_mean <- gam(temp_mean ~
-                   s(dem,month) +
-                   s(ptoc,month, k= 3) +
-                   s(sum_irradiance, month) +
-                   s(tpi,month)+
-                   s(asp, month) +
-                   s(east,north) +
-                   s(week) +
-                   year, 
-                 data = swns_stations_df_200)
-all_years_val_mean <- add_residuals(val_2012, all_years_mean)
-all_years_val_mean$timeframe <- "all years"
-all_years_val_mean$temp_var <- "mean"
-all_years_val_mean$gcv <- all_years_mean$gcv.ubre
-all_years_val_mean$rsq <- summary(all_years_mean)[[10]]
-all_years_val_mean$dev <- summary(all_years_mean)[[14]]
-all_years_val_mean$abs_resid <- abs(all_years_val_mean$resid)
-
-one_year_mean <- gam(temp_mean ~
-                  s(dem,week) +
-                  s(ptoc,week, k= 3)+
-                  s(sum_irradiance, week) +
-                  s(tpi,week)+
-                  s(asp, week) +
-                  s(east,week) +
-                  s(yday) +
-                  month, 
-                data = df)
-one_year_val_mean <- add_residuals(val_2012, one_year_mean)
-one_year_val_mean$timeframe <- "yearly"
-one_year_val_mean$temp_var <- "mean"
-one_year_val_mean$gcv <- one_year_mean$gcv.ubre
-one_year_val_mean$rsq <- summary(one_year_mean)[[10]]
-one_year_val_mean$dev <- summary(one_year_mean)[[14]]
-one_year_val_mean$abs_resid <- abs(one_year_val_mean$resid)
-all_years_mean <- gam(temp_mean ~
-                        s(dem,month) +
-                        s(ptoc,month, k= 3) +
-                        s(sum_irradiance, month) +
-                        s(tpi,month)+
-                        s(asp, month) +
-                        s(east,north) +
-                        s(week) +
-                        year, 
-                      data = swns_stations_df_200)
-all_years_val_max <- add_residuals(val_2012, all_years_max)
-all_years_val_max$timeframe <- "all years"
-all_years_val_max$temp_var <- "max"
-all_years_val_max$gcv <- all_years_max$gcv.ubre
-all_years_val_max$rsq <- summary(all_years_max)[[10]]
-all_years_val_max$dev <- summary(all_years_max)[[14]]
-all_years_val_max$abs_resid <- abs(all_years_val_max$resid)
-
-one_year_max <- gam(temp_max ~
-                       s(dem,week) +
-                       s(ptoc,week, k= 3)+
-                       s(sum_irradiance, week) +
-                       s(tpi,week)+
-                       s(asp, week) +
-                       s(east,week) +
-                       s(yday) +
-                       month, 
-                     data = df)
-one_year_val_max <- add_residuals(val_2012, one_year_max)
-one_year_val_max$timeframe <- "yearly"
-one_year_val_max$temp_var <- "max"
-one_year_val_max$gcv <- one_year_max$gcv.ubre
-one_year_val_max$rsq <- summary(one_year_max)[[10]]
-one_year_val_max$dev <- summary(one_year_max)[[14]]
-one_year_val_max$abs_resid <- abs(one_year_val_max$resid)
-
-all_years_min <- gam(temp_min ~
-                        s(dem,month) +
-                        s(ptoc,month, k= 3) +
-                        s(sum_irradiance, month) +
-                        s(tpi,month)+
-                        s(asp, month) +
-                        s(east,north) +
-                        s(week) +
-                        year, 
-                      data = swns_stations_df_200)
-all_years_val_min <- add_residuals(val_2012, all_years_min)
-all_years_val_min$timeframe <- "all years"
-all_years_val_min$temp_var <- "min"
-all_years_val_min$gcv <- all_years_min$gcv.ubre
-all_years_val_min$rsq <- summary(all_years_min)[[10]]
-all_years_val_min$dev <- summary(all_years_min)[[14]]
-all_years_val_min$abs_resid <- abs(all_years_val_min$resid)
-
-one_year_min <- gam(temp_min ~
-                       s(dem,week) +
-                       s(ptoc,week, k= 3)+
-                       s(sum_irradiance, week) +
-                       s(tpi,week)+
-                       s(asp, week) +
-                       s(east,week) +
-                       s(yday) +
-                       month, 
-                     data = df)
-one_year_val_min <- add_residuals(val_2012, one_year_min)
-one_year_val_min$timeframe <- "yearly"
-one_year_val_min$temp_var <- "min"
-one_year_val_min$gcv <- one_year_min$gcv.ubre
-one_year_val_min$rsq <- summary(one_year_min)[[10]]
-one_year_val_min$dev <- summary(one_year_min)[[14]]
-one_year_val_min$abs_resid <- abs(one_year_val_min$resid)
-
-
+}
 #### weekly####
 # Generate models with daily mins, maxs and means
 temp_var <- list("min", "max", "mean")
@@ -187,7 +159,7 @@ val_knots_weekly_df <- dplyr::bind_rows(val_knots_df)
 
 #### daily ####
 # Generate models with daily mins, maxs and means
-temp_var <- list("min", "max", "mean")
+temp_var <- list("Min", "Max", "Mean")
 
 # Create list of three dataframes
 val_df_list <- list()

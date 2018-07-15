@@ -1,0 +1,125 @@
+---
+title: "Summarizeby Eco District"
+author: "Dana Melamed"
+date: "July 7, 2018"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, echo=FALSE, warning = FALSE, message = FALSE}
+
+library(swnsmodelr)
+
+```
+
+### The Input Data
+
+#### Polygon Boundaries
+```{r, echo = FALSE, warning = FALSE, message=FALSE, fig.height = 10, fig.width = 10}
+# read eco regions, and get gdd 6ya inside each
+
+plot(ecodis_sp,
+     col = randomcoloR::distinctColorPalette(25),
+     main = "Polygon boundaries: Ecodistricts",
+     labels = ecodis_sp$values)
+
+
+```
+
+#### Rasters
+```{r message=FALSE, warning=FALSE, include=FALSE}
+# Names of rasters in Rasters directory (everything before extension)
+# rasters_names_list <- list("dem",  # elevation
+#                           "ptoc", # proxmity to coast
+#                           "east", # easting
+#                           "north",# northing
+#                           "asp",  # aspect
+#                            "tpi", # topographic position index
+#                           "slope") # slope
+# # Make into rasters objects list
+# rasters_list <- lapply(FUN = raster,
+#                        X   = paste0("E:\\Packages\\swnsmodelr\\Rasters\\200\\",rasters_names_list, ".tif"))
+# 
+# # Plot brick of rasters
+# rasters_list %>% brick() %>% plot()
+
+```
+
+```{r, message = FALSE, warning = FALSE,  fig.width = 10, fig.height = 15,echo = FALSE}
+# This RMD summarizes raster values within polygons and writes a word document report.
+
+gdd_6ya <- raster(file.path("E:","Daily","gdd5_6ya.tif"))
+rasters_list_mod <- list(rasters_list[[1]], 
+                      rasters_list[[2]],
+                      rasters_list[[5]],
+                      rasters_list[[6]],
+                      rasters_list[[7]],
+                      gdd_6ya)
+# Select Rasters
+par(mfrow = c(3,2))
+lapply(FUN = plot, X = rasters_list_mod) %>% invisible()
+
+```
+
+### Histograms of raster values inside polygon boundaries
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width = 10, fig.height = 15, fig.hold= TRUE}
+raster_summary <- list() 
+for(j in seq_along(rasters_list_mod)){
+  raster_now <-rasters_list_mod[[j]]
+  raster_name <- names(raster_now)
+    par(mfrow = c(3,2))
+    values <- list()
+    for(i in seq_along(ecodis_sp)){
+      
+      # subset zones 
+      er_now <- subset(ecodis_sp, values %in% ecodis_sp$values[[i]])
+
+      plot(raster_now,
+           main = paste("Ecodistrict ",ecodis_sp$values[[i]],": ",raster_name))
+      plot(er_now, add = TRUE, lwd = 0.1)
+      
+      values[[i]] <- raster::extract(raster_now,
+                                er_now) %>%
+        as.data.frame()
+      names(values[[i]]) <- "values"
+      
+      
+      hist(values[[i]]$values,
+           freq = FALSE,
+           main = NA,
+           xlab = paste(raster_name, " values"),
+           xlim = c(minValue(raster_now), maxValue(raster_now))
+           )
+      
+    }
+    raster_summary[[j]] <- values
+}
+ecodis_summary <- raster_summary
+```
+
+### Summary table
+```{r, warning = FALSE, echo = FALSE, message = FALSE}
+ecodis_summary_df <- data.frame(matrix(NA, 
+                                      nrow = length(ecodis_sp$values),
+                                      ncol = length(rasters_list_mod)))
+names(ecodis_summary_df) <- lapply(FUN = names, X = rasters_list_mod)
+row.names(ecodis_summary_df) <- ecodis_sp$values 
+
+for(i in seq_along(ecodis_summary_df)){ # cols (rasters)
+  for(j in seq_along(ecodis_summary_df[[1]])){ # rows (ecodis)
+    
+    pixels_now <- ecodis_summary[[i]][[j]] %>% filter(!is.na(values))
+    mean_now <- pixels_now$values %>% mean %>% as.numeric() %>% round(2)
+    sd_now   <- pixels_now$values %>% sd %>% as.numeric() %>% round(2)
+    
+    ecodis_summary_df[[i]][[j]] <- paste0(mean_now, "(",sd_now,")")
+    
+  }
+}
+knitr::kable(ecodis_summary_df,
+      row.names = ecodis_sp$values)
+```
+

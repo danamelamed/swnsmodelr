@@ -2,7 +2,7 @@
 
 # Make weekly models for mean temperature modelling
 
-start_date = ymd('2017-04-26')
+start_date = ymd('2017-01-01')
 end_date   = ymd('2017-12-31')
 
 
@@ -17,7 +17,7 @@ df <- filter(model_stations_df,
              date_time >= start_date &
                date_time <= end_date)
 
-
+df <- add_date_columns(df)
 
 # store all summaries
 summaries <- list()
@@ -130,9 +130,9 @@ for(j in 1:n_years){
 }
 
 start_date = ymd('2012-01-01')
-end_date = ymd('2014-12-31')
+end_date = ymd('2017-12-31')
 # Create GDDs
-temp_mean_df <- make_temporal_raster_df("Z:\\Dana\\Weekly\\Daily_Temp_Mean_200_7",
+temp_mean_df <- make_temporal_raster_df("Z:\\Dana\\Daily\\Daily_Temp_Mean_200_2",
                                         start_date,
                                         end_date,
                                         date_chars = c(10,19),
@@ -142,9 +142,9 @@ generate_gdd_output(temp_mean_df,
                     gdd_base = 5,
                     start_date = start_date,
                     end_date = end_date,
-                    output_time_slice = "monthly",
+                    output_timeframe= "daily",
                     growing_season = TRUE,
-                    output_folder = "Z:\\Dana\\Weekly\\Monthly_GDD_200_7",
+                    output_folder = "Z:\\Dana\\Daily\\Daily_GDD5",
                     plot_gdd_raster = TRUE)
 
 ext_df <- extract_dated_rasters_stations(ext_df, temp_mean_df)

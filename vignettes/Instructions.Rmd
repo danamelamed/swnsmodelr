@@ -17,7 +17,7 @@ library(ggplot2)
 ## Introduction
 
   The swnsmodelr package was designed for users to easily model SWNS weather station data with rasters and models of their chosing. The package contains functions and weather station data, and input rasters are contained within the package's R project. 
-  This document follows a workflow of preparing data, generating models, and generating outputs. The objects generated at the various steps in the example are stored in swnsmodelr. 
+This document follows a workflow of preparing data, generating models, and generating outputs. The objects generated at the various steps in the example are stored in swnsmodelr. 
 
 
 
@@ -47,7 +47,7 @@ rasters_names_list <- list("dem",  # elevation
                           "slope") # slope
 # Make into rasters objects list
 rasters_list <- lapply(FUN = raster,
-                       X   = paste0("F:\\Packages\\swnsmodelr\\Rasters\\200\\",rasters_names_list, ".tif"))
+                       X   = paste0("E:\\Packages\\swnsmodelr\\Rasters\\200\\",rasters_names_list, ".tif"))
 
 # Plot brick of rasters
 rasters_list %>% brick() %>% plot()
@@ -70,7 +70,7 @@ str(swns_stations_df_200)
   
 ```{r message=FALSE, warning=FALSE}
 solar_irradiance_rasters_df <- make_temporal_raster_df(
-  in_folder = "F:\\GOES_200",
+  in_folder = "E:\\GOES_200m",
   start_date = ymd('2012-01-01'),
   end_date   = ymd('2012-12-31'),
   date_chars = c(16,-5),
@@ -165,11 +165,19 @@ coordinates(model_stations_sp) = ~ EASTING + NORTHING
 par(mfrow = c(2,2))
 for(i in seq_along(rasters_list)){
   raster_values <- raster::extract(rasters_list[[i]], model_stations_sp) 
+  if(names(rasters_list[[i]]) == "slope"){
+    plot(x = 1:(length(raster_values)),
+       y = raster_values[sort.list(raster_values)], 
+       ylab = names(rasters_list[[i]]),
+       xlab = "Stations",
+       ylim = c(0,90))
+  }else{
   plot(x = 1:(length(raster_values)),
        y = raster_values[sort.list(raster_values)], 
        ylab = names(rasters_list[[i]]),
-       xlab = "Stations")
-
+       xlab = "Stations",
+       ylim = c(minValue(rasters_list[[i]]), maxValue(rasters_list[[i]])))
+}
   
 }
 ```
