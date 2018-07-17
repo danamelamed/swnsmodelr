@@ -61,6 +61,23 @@ validate_daily_GAMs <-  function(model_stations_df,
         daily_res[[i]]$var_pval <- summary(m)[[8]][[l]]
         names(daily_res[[i]])[names(daily_res[[i]]) == "var_pval"] <- names(summary(m)[[7]])[[l]]
       }
+      
+      # if abs_resid is null, re run with alt formula to fix
+      if(is.na(daily_res[[i]]$abs_resid)){
+        m <- alt_formula
+        # Store stats
+        daily_res[[i]] <- modelr::add_residuals(data = daily_val_df, model = m)
+        daily_res[[i]]$gcv <- m$gcv.ubre.dev
+        daily_res[[i]]$rsq <- summary(m)[[10]]
+        daily_res[[i]]$dev <- summary(m)[[14]]
+        daily_res[[i]]$abs_resid <- abs(daily_res[[i]]$resid)
+        # get pvalues for each term
+        for(l in seq_along(summary(m)[[7]])){
+          daily_res[[i]]$var_pval <- summary(m)[[8]][[l]]
+          names(daily_res[[i]])[names(daily_res[[i]]) == "var_pval"] <- names(summary(m)[[7]])[[l]]
+        }
+      }
+      
     }
     
     # Bind daily dataframes into annual

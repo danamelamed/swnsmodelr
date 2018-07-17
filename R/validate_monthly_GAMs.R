@@ -62,6 +62,20 @@ validate_monthly_GAMs <-  function(model_stations_df,
         monthly_res[[i]]$var_pval <- summary(m)[[8]][[l]]
         names(monthly_res[[i]])[names(monthly_res[[i]]) == "var_pval"] <- names(summary(m)[[7]])[[l]]
       }
+      
+      if(is.na(monthly_res[[i]]$abs_resid)){
+        # Store stats
+        monthly_res[[i]] <- modelr::add_residuals(data = monthly_val_df, model = m)
+        monthly_res[[i]]$gcv <- m$gcv.ubre.dev
+        monthly_res[[i]]$rsq <- summary(m)[[10]]
+        monthly_res[[i]]$dev <- summary(m)[[14]]
+        monthly_res[[i]]$abs_resid <- abs(monthly_res[[i]]$resid)
+        
+        for(l in seq_along(summary(m)[[7]])){
+          monthly_res[[i]]$var_pval <- summary(m)[[8]][[l]]
+          names(monthly_res[[i]])[names(monthly_res[[i]]) == "var_pval"] <- names(summary(m)[[7]])[[l]]
+        }
+      }
     
     }
     
