@@ -6,7 +6,8 @@ validate_weekly_GAMs <-  function(model_stations_df,
                                   weeks, # list of weeks ex: 1:52
                                   formula,
                                   alt_formula,
-                                  verbose = FALSE
+                                  verbose = FALSE,
+                                  
                                   ){
   
   # Add date fields to dataframe
@@ -61,7 +62,7 @@ validate_weekly_GAMs <-  function(model_stations_df,
         names(weekly_res[[i]])[names(weekly_res[[i]]) == "var_pval"] <- names(summary(m)[[7]])[[l]]
       }
     }
-    if(is.na(week_res[[i]]$abs_resid)){
+    if(is.na(week_res[[i]]$resid)){
       m <- alt_formula
       # Store stats
       weekly_res[[i]] <- modelr::add_residuals(data = weekly_val_df, model = m)

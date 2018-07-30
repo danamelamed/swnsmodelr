@@ -63,7 +63,7 @@ validate_daily_GAMs <-  function(model_stations_df,
       }
       
       # if abs_resid is null, re run with alt formula to fix
-      if(is.na(daily_res[[i]]$abs_resid)){
+      if(is.na(daily_res[[i]]$resid)){
         m <- alt_formula
         # Store stats
         daily_res[[i]] <- modelr::add_residuals(data = daily_val_df, model = m)

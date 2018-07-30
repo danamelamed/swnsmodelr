@@ -63,7 +63,7 @@ validate_monthly_GAMs <-  function(model_stations_df,
         names(monthly_res[[i]])[names(monthly_res[[i]]) == "var_pval"] <- names(summary(m)[[7]])[[l]]
       }
       
-      if(is.na(monthly_res[[i]]$abs_resid)){
+      if(is.na(monthly_res[[i]]$resid)){
         # Store stats
         monthly_res[[i]] <- modelr::add_residuals(data = monthly_val_df, model = m)
         monthly_res[[i]]$gcv <- m$gcv.ubre.dev
