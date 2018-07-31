@@ -3,9 +3,9 @@
 ##### All years timeframe #####
 temp_var <- list("min", "max", "mean")
 all_years <- list()
-all_years_val <- list()
+all_years_val_list <- list()
 for(i in seq_along(temp_var)){
-  all_years_val[[i]] <- gam(formula(paste0("temp_",temp_var," ~
+  all_years[[i]] <- gam(formula(paste0("temp_",temp_var," ~
                                        s(dem,month) +
                                        s(ptoc,month, k= 3) +
                                        s(sum_irradiance, month) +
@@ -15,11 +15,11 @@ for(i in seq_along(temp_var)){
                                        s(week) +
                                        year")), 
                         data = model_stations_df)
-  all_years_val[[i]] <- add_residuals(val_df_2012, all_years_val[[i]])
+  all_years_val_list[[i]] <- add_residuals(val_df_2012, all_years[[i]])
 
   
-  if(is.na(all_years_val[[i]]$resid)){
-    all_years_val[[i]] <- gam(formula(paste0("temp_",temp_var[[i]]," ~
+  if(is.na(all_years_val_list[[i]]$resid)){
+    all_years[[i]] <- gam(formula(paste0("temp_",temp_var[[i]]," ~
                                          s(dem,month) +
                                          s(ptoc,month, k= 3) +
                                          s(tpi,month)+
@@ -28,18 +28,18 @@ for(i in seq_along(temp_var)){
                                          s(week) +
                                          year")), 
                           data = model_stations_df)
-    all_years_val[[i]] <- add_residuals(val_df_2012, all_years_val[[i]])
+    all_years_val_list[[i]] <- add_residuals(val_df_2012, all_years[[i]])
   }
-  all_years_val[[i]]$timeframe <- "All years"
-  all_years_val[[i]]$knots <- "No limit"
-  all_years_val[[i]]$temp_var <- temp_var[[i]]
-  all_years_val[[i]]$gcv <- all_years_val[[i]]$gcv.ubre
-  all_years_val[[i]]$rsq <- summary(all_years_val[[i]])[[10]]
-  all_years_val[[i]]$dev <- summary(all_years_val[[i]])[[14]]
-  all_years_val[[i]]$abs_resid <- abs(all_years_val[[i]]$resid)
-  for(l in seq_along(summary(all_years_val[[i]])[[7]])){
-    all_years_val[[i]]$var_pval <- summary(all_years_val[[i]])[[8]][[l]]
-    names(all_years_val[[i]])[names(all_years_val[[i]]) == "var_pval"] <- names(summary(all_years_val[[i]])[[7]])[[l]]
+  all_years_val_list[[i]]$timeframe <- "All years"
+  all_years_val_list[[i]]$knots <- "No limit"
+  all_years_val_list[[i]]$temp_var <- temp_var[[i]]
+  all_years_val_list[[i]]$gcv <- all_years[[i]]$gcv.ubre
+  all_years_val_list[[i]]$rsq <- summary(all_years[[i]])[[10]]
+  all_years_val_list[[i]]$dev <- summary(all_years[[i]])[[14]]
+  all_years_val_list[[i]]$abs_resid <- abs(all_years_val_list[[i]]$resid)
+  for(l in seq_along(summary(all_years[[i]])[[7]])){
+    all_years_val_list[[i]]$var_pval <- summary(all_years[[i]])[[8]][[l]]
+    names(all_years_val_list[[i]])[names(all_years_val_list[[i]]) == "var_pval"] <- names(summary(all_years[[i]])[[7]])[[l]]
   }
 }
 all_years_val <- bind_rows(all_years_val_list)
@@ -194,7 +194,8 @@ val_list <- list(all_years_val,
                       monthly_val,
                       weekly_val,
                       daily_val)
-
+# Error at validation stations histogram
+pdf("E://testpdf2.pdf", height = 2)
 for(i in seq_along(val_list)){
 df_val <- val_list[[i]]
 print(ggplot(df_val) + 
@@ -203,11 +204,60 @@ print(ggplot(df_val) +
                  binwidth = 2) + 
   facet_wrap(~ temp_var) + 
   scale_fill_manual(values = c("light blue","light pink","beige"),
-                    guide = guide_legend(title = "Daily Temperature Variable"),
+                    guide = guide_legend(title = "Daily Temperature \n Variable"),
                     labels = c("Maximum","Minimum",'Mean')) +
+    guide(fill = FALSE) +
   labs(title = paste0(letters[i], ") ",df_val$timeframe),
        x = "Error at Validation Stations") + 
-  theme(strip.background = element_blank(), strip.text = element_blank()) +
+  #theme(strip.background = element_blank(), strip.text = element_blank()) +
   coord_cartesian(xlim = c(-20,20),
                   ylim = c(0,5500)))
 }
+
+# Error at validation station by temp_mean
+for(i in seq_along(val_list)){
+  df_val <- val_list[[i]]
+  print(ggplot(df_val) + 
+          geom_smooth(aes(x = temp_mean, y = resid, colour  = temp_var)) + 
+          facet_wrap(~ temp_var) + 
+          scale_colour_manual(values = c("blue","red","grey"),
+                              guide = guide_legend(title = "Daily Temperature \n Variable")) +
+          labs(title = paste0(letters[i], ") ",df_val$timeframe),
+               x = "Daily Mean Temperature",
+               y = "Error at Validation Stations") + 
+          #   theme(strip.background = element_blank(), strip.text = element_blank()) +
+          coord_cartesian(ylim = c(-10,10)))
+}
+
+# GCV scores smooth
+for(i in seq_along(val_list)){
+  df_val <- val_list[[i]]
+  print(ggplot(df_val) + 
+          geom_smooth(aes(y = gcv, x =  yday, colour  = temp_var)) + 
+          facet_wrap(~ temp_var) + 
+          scale_colour_manual(values = c("blue","red","grey"),
+                              guide = guide_legend(title = "Daily Temperature \n Variable")) +
+          labs(title = paste0(letters[i], ") ",df_val$timeframe),
+               y = "GCV Scores",
+               x = "Day of the Year 2012") + 
+          #  theme(strip.background = element_blank(), strip.text = element_blank()) +
+          coord_cartesian(ylim = c(0,23)))
+}
+
+# Adjusted R2 scores smooth
+for(i in seq_along(val_list)){
+  df_val <- val_list[[i]]
+  print(ggplot(df_val) + 
+          geom_smooth(aes(y = rsq, x =  yday, colour  = temp_var)) + 
+          facet_wrap(~ temp_var) + 
+          scale_colour_manual(values = c("blue","red","grey"),
+                              guide = guide_legend(title = "Daily Temperature \n Variable")) +
+          labs(title = paste0(letters[i], ") ",df_val$timeframe),
+               y = "Adjusted Rsquared",
+               x = "Day of the Year 2012") + 
+          # theme(strip.background = element_blank(), strip.text = element_blank()) +
+          coord_cartesian(ylim = c(0,1))
+        ) 
+}
+
+dev.off()
