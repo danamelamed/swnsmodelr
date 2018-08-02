@@ -194,70 +194,49 @@ val_list <- list(all_years_val,
                       monthly_val,
                       weekly_val,
                       daily_val)
-# Error at validation stations histogram
-pdf("E://testpdf2.pdf", height = 2)
-for(i in seq_along(val_list)){
-df_val <- val_list[[i]]
-print(ggplot(df_val) + 
-  geom_histogram(aes(x = resid, fill  = temp_var), 
-                 colour = "black",
-                 binwidth = 2) + 
-  facet_wrap(~ temp_var) + 
-  scale_fill_manual(values = c("light blue","light pink","beige"),
-                    guide = guide_legend(title = "Daily Temperature \n Variable"),
-                    labels = c("Maximum","Minimum",'Mean')) +
-    guide(fill = FALSE) +
-  labs(title = paste0(letters[i], ") ",df_val$timeframe),
-       x = "Error at Validation Stations") + 
-  #theme(strip.background = element_blank(), strip.text = element_blank()) +
-  coord_cartesian(xlim = c(-20,20),
-                  ylim = c(0,5500)))
-}
 
-# Error at validation station by temp_mean
-for(i in seq_along(val_list)){
-  df_val <- val_list[[i]]
-  print(ggplot(df_val) + 
-          geom_smooth(aes(x = temp_mean, y = resid, colour  = temp_var)) + 
-          facet_wrap(~ temp_var) + 
-          scale_colour_manual(values = c("blue","red","grey"),
-                              guide = guide_legend(title = "Daily Temperature \n Variable")) +
-          labs(title = paste0(letters[i], ") ",df_val$timeframe),
-               x = "Daily Mean Temperature",
-               y = "Error at Validation Stations") + 
-          #   theme(strip.background = element_blank(), strip.text = element_blank()) +
-          coord_cartesian(ylim = c(-10,10)))
-}
+bind_val <- bind_rows(all_years_val,
+                      annual_val,
+                      monthly_val,
+                      weekly_val,
+                      daily_val)
+bind_val <- bind_val %>%
+  mutate(temp_var_value = if_else(temp_var == "mean",temp_mean, temp_var_value),
+         temp_var_value = if_else(temp_var == "min", temp_min, temp_var_value),
+         temp_var_value = if_else(temp_var == "max", temp_max, temp_var_value)) %>%
+  mutate(timeframe = factor(timeframe, levels = c("All years","Annual","Monthly","Weekly","Daily")))
 
-# GCV scores smooth
-for(i in seq_along(val_list)){
-  df_val <- val_list[[i]]
-  print(ggplot(df_val) + 
-          geom_smooth(aes(y = gcv, x =  yday, colour  = temp_var)) + 
-          facet_wrap(~ temp_var) + 
-          scale_colour_manual(values = c("blue","red","grey"),
-                              guide = guide_legend(title = "Daily Temperature \n Variable")) +
-          labs(title = paste0(letters[i], ") ",df_val$timeframe),
-               y = "GCV Scores",
-               x = "Day of the Year 2012") + 
-          #  theme(strip.background = element_blank(), strip.text = element_blank()) +
-          coord_cartesian(ylim = c(0,23)))
-}
+pdf("E://testplots.pdf",height = 7.5)
+# Error
+ggplot(data = bind_val) +
+  geom_histogram(aes(x = resid,  fill = timeframe),
+              colour = "black",binwidth = 1) +
+  facet_grid(timeframe~temp_var) +
+  labs(x = "Error at Validation Stations", y = "Count") +
+  coord_cartesian(xlim = c(-10,10)) +
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=1),
+        legend.position = "none")
 
-# Adjusted R2 scores smooth
-for(i in seq_along(val_list)){
-  df_val <- val_list[[i]]
-  print(ggplot(df_val) + 
-          geom_smooth(aes(y = rsq, x =  yday, colour  = temp_var)) + 
-          facet_wrap(~ temp_var) + 
-          scale_colour_manual(values = c("blue","red","grey"),
-                              guide = guide_legend(title = "Daily Temperature \n Variable")) +
-          labs(title = paste0(letters[i], ") ",df_val$timeframe),
-               y = "Adjusted Rsquared",
-               x = "Day of the Year 2012") + 
-          # theme(strip.background = element_blank(), strip.text = element_blank()) +
-          coord_cartesian(ylim = c(0,1))
-        ) 
-}
+# GCV Scores
+ggplot(data = bind_val) +
+  geom_point(aes(x = yday, y = gcv, colour = timeframe),
+              se = FALSE) +
+  facet_grid(timeframe~temp_var) +
+  labs(x = "Day of the Year (2012)", y = "GCV Score") +
+  coord_cartesian(ylim = c(0,20)) +
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=1),
+        legend.position = "none")
+
+# Adjusted R Squared
+ggplot(data = bind_val) +
+  geom_point(aes(x = yday, y = rsq, colour = timeframe)) +
+  facet_grid(timeframe~temp_var) +
+  labs(x = "Day of the Year (2012)", y = "Adj. R^2") +
+  scale_y_continuous(breaks = c(0,0.5,1)) +
+  coord_cartesian(ylim = c(0,1)) +
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=1),
+        legend.position = "none")
+
 
 dev.off()
+
