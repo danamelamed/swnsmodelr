@@ -4,13 +4,9 @@
 #' 
 #' 
 #
-start_date <- ymd("2012-01-01")
-end_date <- ymd("2012-12-31")
-gdd_rasters_df <- make_temporal_raster_df(file.path("E:","Daily","Daily_GDD0"),
-                                                       start_date,
-                                                       end_date,
-                                                       date_chars = c(6,-4),
-                                                       date_format = "%Y-%m-%d")
+generate_average_gdd <- function (start_date ,
+end_date ,
+gdd_rasters_df ){
 # growing_season = TRUE
 # generate_average_gdd <- function(gdd_rasters_df,
 #                                  start_date,
@@ -37,5 +33,6 @@ j = 1
 extra_days <- extra_days %>% unlist()
 gdd_rasters_df <- gdd_rasters_df[-c(extra_days), ]
   
+
 
 }

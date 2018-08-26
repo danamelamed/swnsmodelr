@@ -523,7 +523,7 @@ ggplot(bind_val, aes(x = yday, y = resid, colour = temp_var_2)) +
 # residuals by temperature mean
 ggplot(data = df, aes(x = resid )) +
   geom_density(aes(color = timeframe), size = 1) +
-  facet_wrap(~temp_var_2) +
+  facet_wrap(~temp_var) +
   scale_colour_manual(values = c("salmon",
                                  "forestgreen",
                                  "black",

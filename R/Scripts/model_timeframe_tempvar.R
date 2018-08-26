@@ -281,5 +281,5 @@ ggplot(data = bind_val_test) +
   facet_grid(timeframe~temp_var) 
 
 ggplot(data = bind_val_test) +
-  geom_point(aes(x = yday, y = s_ptoc, colour = timeframe)) +
+  geom_point(aes(x = yday, y = s_asp, colour = timeframe)) +
   facet_grid(timeframe~temp_var) 

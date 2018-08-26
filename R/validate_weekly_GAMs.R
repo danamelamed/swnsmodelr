@@ -6,7 +6,7 @@ validate_weekly_GAMs <-  function(model_stations_df,
                                   weeks, # list of weeks ex: 1:52
                                   formula,
                                   alt_formula,
-                                  verbose = FALSE,
+                                  verbose = FALSE
                                   
                                   ){
   
