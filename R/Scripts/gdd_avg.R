@@ -18,3 +18,5 @@ avg <- sum(brick)/6
 plot(avg)
 
 writeRaster(avg,"Z://Dana//ProjectOutputs//GDD5_avg_12_16_gs.tif")
+
+
