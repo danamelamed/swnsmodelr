@@ -1,0 +1,178 @@
+---
+title: "GDD vs. EVI Investigation"
+author: "Dana Melamed"
+date: "June 28, 2018"
+output:   word_document
+---
+
+
+
+```{r warning=FALSE, echo=FALSE, message = FALSE}
+library(swnsmodelr)
+library(ggplot2)
+```
+
+
+
+```{r warning=FALSE, message = FALSE, echo = FALSE}
+# get evi values
+# Make table of EVI rasters
+evi_raster_df <- make_temporal_raster_df(file.path("E:","EVI_200m"),
+                                         start_date = ymd('2012-04-01'),
+                                         end_date = ymd('2017-11-30'),
+                                         date_chars = c(5,-4),
+                                         date_format = "%Y_%j") %>%
+                add_date_columns() %>%
+                filter(month >= 4 & month <= 11)
+
+evi_df <- extract_temporal_raster_values(evi_raster_df,
+                                         swns_stations_df,
+                                         col_name = "evi",
+                                         verbose = FALSE) %>% 
+          dplyr::select(stationid, EASTING, NORTHING, date_time, evi) %>%
+          filter(date_time %in% evi_raster_df$date_time) %>%
+          mutate(evi_calib = (evi + 2000)/12000*1000)
+```
+
+
+```{r warning = FALSE, message = FALSE, echo = FALSE}
+# add gdd values
+gdd_raster_df <- make_temporal_raster_df(file.path("E:","Daily","GDD0_16_day"),
+                                         start_date = ymd('2012-04-01'),
+                                         end_date   = ymd('2017_11_30'),
+                                         date_chars = c(9,-4),
+                                         date_format = "%Y-%m-%d")
+
+gdd_evi_df <- extract_temporal_raster_values(gdd_raster_df,
+                                         evi_df,
+                                         col_name = "gdd",
+                                         verbose = FALSE)
+```
+
+
+Add GDD zone values
+```{r warning = FALSE, echo = FALSE}
+gdd_zones <- raster(file.path("E:","Daily","gdd_zones.tif"))
+
+gdd_evi_df <- extract_constant_raster_values(gdd_evi_df, list(gdd_zones)) %>%
+              add_date_columns()
+```
+
+
+
+## Appendix B: Graphs
+
+### Model Stations
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 5, fig.hold= TRUE}
+# Filter to zone 1, model stations
+
+
+gdd_zones_list <- list(1,2,3,4,5)
+for(j in seq_along(gdd_zones_list)){
+   gdd_zone_now <- gdd_zones_list[[j]]  
+    gdd_evi_df_now <- gdd_evi_df %>% 
+                  filter(gdd_zones == gdd_zone_now & stationid %in% model_stations_list)
+    
+    stations_list <- gdd_evi_df_now %>% 
+                 filter(!duplicated(stationid)) %>%
+                 dplyr::select(stationid) 
+    
+    stations_list <- stations_list$stationid
+           
+    
+    gdd_zone_now_raster <- gdd_zones
+    gdd_zone_now_raster[gdd_zone_now_raster != gdd_zone_now] <- 0
+    
+    for(i in seq_along(stations_list)){
+          print('')
+          gdd_evi_df_now <- gdd_evi_df %>% 
+                            filter(gdd_zones == gdd_zone_now & 
+                                     stationid %in% model_stations_list)
+          gdd_evi_df_now <- gdd_evi_df_now %>% filter(stationid == stations_list[[i]])
+
+          if(length(gdd_evi_df_now[[1]] != 0)){
+            # plot point on map
+            point_now <- gdd_evi_df_now 
+            coordinates(point_now) = ~ EASTING + NORTHING 
+            plot(gdd_zone_now_raster, 
+                 main = paste0("Station : ",stations_list[[i]]," (Zone ",gdd_zone_now,")"),
+                  col = c("grey","pink"), legend = FALSE)
+            points(point_now, pch = 21, bg = "black", lwd = 1.5)
+            
+            print(ggplot(data = gdd_evi_df_now) +
+                   geom_point(aes(x = yday, y= gdd, colour = "blue")) +
+                   geom_smooth(aes(x = yday, y=gdd, colour = "blue"), se = FALSE) +
+                   geom_point(aes(x = yday, y= evi_calib, colour = "green")) +
+                   geom_smooth(aes(x = yday, y=evi_calib, colour = "green"), se = FALSE) +
+                   facet_wrap(~ year, ncol = 2) +
+                   scale_colour_discrete(labels = c("GDD0","EVI")) +
+                   guides(colour = guide_legend(title = "Variable")) +
+                   labs(x = "Day of the Year", y = "Value") +
+                   theme(text = element_text(size=12))            )
+            }else{}
+                  
+          
+          
+          print('')
+          print('')
+          
+    }
+}
+```
+
+### Validation Stations
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 5, fig.hold= TRUE}
+#
+gdd_zones_list <- list(1,2,3,4,5)
+for(j in seq_along(gdd_zones_list)){
+   gdd_zone_now <- gdd_zones_list[[j]]  
+    gdd_evi_df_now <- gdd_evi_df %>% 
+                  filter(gdd_zones == gdd_zone_now & stationid %in% val_stations_list)
+    
+    stations_list <- gdd_evi_df_now %>% 
+                 filter(!duplicated(stationid)) %>%
+                 dplyr::select(stationid) 
+    
+    stations_list <- stations_list$stationid
+    print(stations_list)
+    
+    gdd_zone_now_raster <- gdd_zones
+    gdd_zone_now_raster[gdd_zone_now_raster != gdd_zone_now] <- 0
+    
+    for(i in seq_along(stations_list)){
+          print('')
+          gdd_evi_df_now <- gdd_evi_df %>% 
+                  filter(gdd_zones == gdd_zone_now & stationid %in% val_stations_list)
+          gdd_evi_df_now <- gdd_evi_df_now %>% filter(stationid == stations_list[[i]])
+
+          if(length(gdd_evi_df_now[[1]] != 0)){
+            # plot point on map
+            point_now <- gdd_evi_df_now 
+            coordinates(point_now) = ~ EASTING + NORTHING 
+            plot(gdd_zone_now_raster, 
+                 main = paste0("Station : ",stations_list[[i]]," (Zone ",gdd_zone_now,")"),
+                  col = c("grey","pink"), legend = FALSE)
+            points(point_now, pch = 21, bg = "black", lwd = 1.5)
+            
+            print(ggplot(data = gdd_evi_df_now) +
+                   geom_point(aes(x = yday, y= gdd, colour = "blue")) +
+                   geom_smooth(aes(x = yday, y=gdd, colour = "blue"), se = FALSE) +
+                   geom_point(aes(x = yday, y= evi_calib, colour = "green")) +
+                   geom_smooth(aes(x = yday, y=evi_calib, colour = "green"), se = FALSE) +
+                   facet_wrap(~ year, ncol = 2) +
+                   scale_colour_discrete(labels = c("GDD0","EVI")) +
+                   guides(colour = guide_legend(title = "Variable")) +
+                   labs(x = "Day of the Year", y = "Value") +
+                   theme(text = element_text(size=12))            )
+            }else{}
+                  
+          
+          
+          print('')
+          print('')
+          
+    }
+}
+```

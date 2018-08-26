@@ -274,7 +274,60 @@ val_knots_list <- list(all_years_val_knots,
                  weekly_val_knots,
                  daily_val_knots)
 
+
+bind_val$knots <- "No limit"
+bind_val_knots <- bind_rows(all_years_val_knots,
+                       annual_val_knots,
+                       monthly_val_knots,
+                       weekly_val_knots,
+                       daily_val_knots)
+bind_val_knots$temp_var <- "mean"
+bind_val_knots <- bind_rows(bind_val_knots, 
+                            bind_val)
+
 #### Plots ####
+bind_val_knots <- bind_val_knots %>%
+  filter(temp_var == "mean") %>%
+  mutate(timeframe = factor(timeframe, levels = c("All years",
+                                                  "Annual",
+                                                  "Monthly",
+                                                  "Weekly",
+                                                  "Daily")))
+
+# Error
+ggplot(data = bind_val_knots) +
+  geom_histogram(aes(x = resid,  fill = timeframe),
+                 colour = "black",binwidth = 1) +
+  facet_grid(timeframe~knots) +
+  labs(x = "Error at Validation Stations", y = "Count") +
+  coord_cartesian(xlim = c(-10,10)) +
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=1),
+        legend.position = "none")
+
+# GCV Scores
+ggplot(data = bind_val_knots) +
+  geom_point(aes(x = yday, y = gcv, colour = timeframe),
+             se = FALSE) +
+  facet_grid(timeframe~knots) +
+  labs(x = "Day of the Year (2012)", y = "GCV Score") +
+  coord_cartesian(ylim = c(0,20)) +
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=1),
+        legend.position = "none")
+
+# Adjusted R Squared
+ggplot(data = bind_val_knots) +
+  geom_point(aes(x = yday, y = rsq, colour = timeframe)) +
+  facet_grid(timeframe~knots) +
+  labs(x = "Day of the Year (2012)", y = "Adj. R^2") +
+  scale_y_continuous(breaks = c(0,0.5,1)) +
+  coord_cartesian(ylim = c(0,1)) +
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=1),
+        legend.position = "none")
+
+
+dev.off()
+
+
 pdf("E://testpdf.pdf", height = 2)
 # Error at validation stations histogram
 for(i in seq_along(val_knots_list)){
@@ -288,14 +341,15 @@ for(i in seq_along(val_knots_list)){
           geom_histogram(aes(x = resid, fill  = knots), 
                          colour = "black",
                          binwidth = 2) + 
-          facet_wrap(~ knots) + 
+          facet_wrap(~ knots, ncol = 4) + 
           scale_fill_manual(values = c("salmon","forest green","royal blue","dark grey"),
                             guide = guide_legend(title = "Value of K"))  +
           labs(title = paste0(letters[i], ") ",df_val$timeframe),
                x = "Error at Validation Stations") + 
          # theme(strip.background = element_blank(), strip.text = element_blank()) +
           coord_cartesian(xlim = c(-20,20),
-                          ylim = c(0,5500)))
+                          ylim = c(0,5500)) +
+          theme(legend.position = "none"))
 }
 
 
@@ -309,14 +363,15 @@ for(i in seq_along(val_knots_list)){
   df_val$knots <- as.character(df_val$knots)
   print(ggplot(df_val) + 
           geom_smooth(aes(x = temp_mean, y = resid, colour  = knots)) + 
-          facet_wrap(~ knots) + 
+          facet_wrap(~ knots, ncol = 4) + 
           scale_colour_manual(values = c("salmon","forest green","royal blue","dark grey"),
                             guide = guide_legend(title = "Value of K")) +
           labs(title = paste0(letters[i], ") ",df_val$timeframe),
                x = "Daily Mean Temperature",
                y = "Error at Validation Stations") + 
        #   theme(strip.background = element_blank(), strip.text = element_blank()) +
-          coord_cartesian(ylim = c(-10,10)))
+          coord_cartesian(ylim = c(-10,10))+
+         theme(legend.position = "none"))
 }
 
 # GCV scores smooth
@@ -329,14 +384,15 @@ for(i in seq_along(val_knots_list)){
   df_val$knots <- as.character(df_val$knots)
   print(ggplot(df_val) + 
           geom_smooth(aes(y = gcv, x =  yday, colour  = knots)) + 
-          facet_wrap(~ knots) + 
+          facet_wrap(~ knots, ncol = 4) + 
           scale_colour_manual(values = c("salmon","forest green","royal blue","dark grey"),
                             guide = guide_legend(title = "Value of K")) +
           labs(title = paste0(letters[i], ") ",df_val$timeframe),
                y = "GCV Scores",
                x = "Day of the Year 2012") + 
         #  theme(strip.background = element_blank(), strip.text = element_blank()) +
-          coord_cartesian(ylim = c(0,20)))
+          coord_cartesian(ylim = c(0,20))+
+          theme(legend.position = "none"))
 }
 
 # Adjusted R2 scores smooth
@@ -349,13 +405,14 @@ for(i in seq_along(val_knots_list)){
   df_val$knots <- as.character(df_val$knots)
   print(ggplot(df_val) + 
           geom_smooth(aes(y = rsq, x =  yday, colour  = knots)) + 
-          facet_wrap(~ knots) + 
+          facet_wrap(~ knots, ncol = 4) + 
           scale_colour_manual(values = c("salmon","forest green","royal blue","dark grey"),
                               guide = guide_legend(title = "Value of K")) +
           labs(title = paste0(letters[i], ") ",df_val$timeframe),
                y = "Adjusted Rsquared",
                x = "Day of the Year 2012") + 
          # theme(strip.background = element_blank(), strip.text = element_blank()) +
-          coord_cartesian(ylim = c(0,1)))
+          coord_cartesian(ylim = c(0,1))+
+          theme(legend.position = "none"))
 }
 dev.off()

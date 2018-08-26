@@ -201,6 +201,7 @@ bind_val <- bind_rows(all_years_val,
                       weekly_val,
                       daily_val)
 bind_val <- bind_val %>%
+  mutate(temp_var_value = 1) %>%
   mutate(temp_var_value = if_else(temp_var == "mean",temp_mean, temp_var_value),
          temp_var_value = if_else(temp_var == "min", temp_min, temp_var_value),
          temp_var_value = if_else(temp_var == "max", temp_max, temp_var_value)) %>%
@@ -223,7 +224,7 @@ ggplot(data = bind_val) +
               se = FALSE) +
   facet_grid(timeframe~temp_var) +
   labs(x = "Day of the Year (2012)", y = "GCV Score") +
-  coord_cartesian(ylim = c(0,20)) +
+  coord_cartesian(ylim = c(0,25)) +
   theme(panel.border = element_rect(colour = "black", fill=NA, size=1),
         legend.position = "none")
 
@@ -240,3 +241,45 @@ ggplot(data = bind_val) +
 
 dev.off()
 
+# makes plots for individual variable pvalues
+bind_val_test <- bind_val %>%
+  mutate(s_dem = 1) %>% 
+  mutate(s_ptoc = 1) %>% 
+  mutate(s_tpi = 1) %>% 
+  mutate(s_asp = 1) %>% 
+  mutate(s_sum_irradiance = 1) %>% 
+  mutate(s_dem = if_else(!is.na(`s(dem,month)`), `s(dem,month)`, s_dem),
+         s_dem = if_else(!is.na(`s(dem,week)`),  `s(dem,week)` , s_dem),
+         s_dem = if_else(!is.na(`s(dem,yday)`),  `s(dem,yday)` , s_dem),
+         s_dem = if_else(!is.na(`s(dem)`),       `s(dem)`      , s_dem)) %>% 
+  mutate(s_ptoc = if_else(!is.na(`s(ptoc,month)`), `s(ptoc,month)`, s_ptoc),
+         s_ptoc = if_else(!is.na(`s(ptoc,week)`),  `s(ptoc,week)` , s_ptoc),
+         s_ptoc = if_else(!is.na(`s(ptoc,yday)`),  `s(ptoc,yday)` , s_ptoc),
+         s_ptoc = if_else(!is.na(`s(ptoc)`),       `s(ptoc)`      , s_ptoc)) %>% 
+  mutate(s_tpi = if_else(!is.na(`s(tpi,month)`), `s(tpi,month)`, s_tpi),
+         s_tpi = if_else(!is.na(`s(tpi,week)`),  `s(tpi,week)` , s_tpi),
+         s_tpi = if_else(!is.na(`s(tpi,yday)`),  `s(tpi,yday)` , s_tpi),
+         s_tpi = if_else(!is.na(`s(tpi)`),       `s(tpi)`      , s_tpi)) %>% 
+  mutate(s_asp = if_else(!is.na(`s(asp,month)`), `s(asp,month)`, s_asp),
+         s_asp = if_else(!is.na(`s(asp,week)`),  `s(asp,week)` , s_asp),
+         s_asp = if_else(!is.na(`s(asp,yday)`),  `s(asp,yday)` , s_asp)) %>% 
+  mutate(s_sum_irradiance = if_else(!is.na(`s(sum_irradiance,yday)`),  `s(sum_irradiance,yday)` , s_sum_irradiance),
+         s_sum_irradiance = if_else(!is.na(`s(sum_irradiance)`),       `s(sum_irradiance)`      , s_sum_irradiance))
+
+
+ggplot(data = bind_val_test) +
+  geom_point(aes(x = yday, y = s_dem, colour = timeframe)) +
+  facet_grid(timeframe~temp_var) +
+  labs(x = "Day of the Year (2012)", y = "Adj. R^2") +
+  scale_y_continuous(breaks = c(0,0.5,1)) +
+  coord_cartesian(ylim = c(0,1)) +
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=1),
+        legend.position = "none")
+
+ggplot(data = bind_val_test) +
+  geom_point(aes(x = yday, y = s_tpi, colour = timeframe)) +
+  facet_grid(timeframe~temp_var) 
+
+ggplot(data = bind_val_test) +
+  geom_point(aes(x = yday, y = s_ptoc, colour = timeframe)) +
+  facet_grid(timeframe~temp_var) 

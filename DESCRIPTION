@@ -12,7 +12,8 @@ Depends: R (>= 3.4.1),
     lubridate,
     reshape2,
     magrittr,
-    modelr
+    modelr,
+    randomcoloR
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true

@@ -165,31 +165,31 @@ A frequency plot (or density, in R), shows that the daily mean temperature has t
 - However, something strange is happening at the end of June. Since all the data values on this day seem ordinary, something must be happening with the model.
 ```{r include=FALSE}
 # Generate models with daily mins, maxs and means
-ind_var <- list("min", "max", "mean")
+temp_var <- list("min", "max", "mean")
 
 # Create list of three dataframes
 val_df_list <- list()
 # Loop over each option: min, max and mean
-for(i in seq_along(ind_var)){
+for(i in seq_along(temp_var)){
     val_df_list[[i]] <- validate_weekly_GAMs(model_stations_df = model_stations_df,
                                             val_stations_df = val_stations_df,
                                             years = 2012,
                                             weeks = 1:52,
-                                            formula =paste0("temp_",ind_var[[i]],"~
+                                            formula =paste0("temp_",temp_var[[i]],"~
                                                          s(east,north) +
                                                          s(dem, yday)  +
                                                          s(sum_irradiance, yday) +
                                                          s(asp_c, yday) +
                                                          s(tpi, yday) + 
                                                          s(ptoc,yday)"),
-                                            alt_formula =paste0("temp_",ind_var[[i]],"~
+                                            alt_formula =paste0("temp_",temp_var[[i]],"~
                                                          s(east,north) +
                                                          s(dem, yday)  +
                                                          s(asp_c, yday) +
                                                          s(tpi, yday) + 
                                                          s(ptoc,yday)")
                                             ) 
-    val_df_list[[i]]$ind_var <- ind_var[[i]]
+    val_df_list[[i]]$temp_var <- temp_var[[i]]
     val_df_list[[i]]$knots   <- "no limit"
 }
 
@@ -203,15 +203,15 @@ val_df <- dplyr::bind_rows(val_df_list)
 ```{r, fig.hold = TRUE,echo = FALSE}
 
 ggplot(data = val_df, mapping = aes(x = week, y = gcv)) +
-  geom_point(aes(colour = ind_var)) +
-  geom_smooth(aes(colour =ind_var))
+  geom_point(aes(colour = temp_var)) +
+  geom_smooth(aes(colour =temp_var))
  
 
 ggplot(data = val_df, mapping = aes(x = abs_resid)) +
-  geom_density(aes(colour = ind_var))
+  geom_density(aes(colour = temp_var))
 
 ggplot(data = val_df, mapping = aes(x = temp_mean, y = abs_resid)) +
-  geom_smooth(aes(colour = ind_var), se = FALSE) 
+  geom_smooth(aes(colour = temp_var), se = FALSE) 
 
 ```
 
@@ -227,11 +227,11 @@ add knots to max: val_df.max
 
 ```{r,warning=FALSE, include=FALSE}
 knots <- list(1, 5 ,9)
-ind_vars<- list("min","max","mean")
+temp_vars<- list("min","max","mean")
 val_knots_df <- list()
-for(j in seq_along(ind_var)){# Generate models with daily mins, maxs and means
+for(j in seq_along(temp_var)){# Generate models with daily mins, maxs and means
         
-        val_no_limit<- filter(val_df, ind_var == ind_vars[[j]])
+        val_no_limit<- filter(val_df, temp_var == temp_vars[[j]])
         # Create list of three dataframes
         val_df_list<- list()
         # Loop over each option: min, max and mean
@@ -240,14 +240,14 @@ for(j in seq_along(ind_var)){# Generate models with daily mins, maxs and means
                                                     val_stations_df = val_stations_df,
                                                     years = 2012,
                                                     weeks = 1:52,
-                                                    formula =paste0("temp_",ind_vars[[j]],"~
+                                                    formula =paste0("temp_",temp_vars[[j]],"~
                                                                  s(east,north, k=",knots[[i]],") +
                                                                  s(dem, yday, k=",knots[[i]],")  +
                                                                  s(sum_irradiance, yday, k=",knots[[i]],") +
                                                                  s(asp_c, yday, k=",knots[[i]],") +
                                                                  s(tpi, yday, k=",knots[[i]],") + 
                                                                  s(ptoc,yday, k=3)"),
-                                                    alt_formula =paste0("temp_",ind_vars[[j]]," ~
+                                                    alt_formula =paste0("temp_",temp_vars[[j]]," ~
                                                                  s(east,north, k=",knots[[i]],") +
                                                                  s(dem, yday, k=",knots[[i]],")  +
                                                                  s(asp_c, yday, k=",knots[[i]],") +
@@ -255,7 +255,7 @@ for(j in seq_along(ind_var)){# Generate models with daily mins, maxs and means
                                                                  s(ptoc,yday, k=3)")
                                                     ) 
             val_df_list[[i]]$knots <- as.character(knots[[i]])
-            val_df_list[[i]]$ind_var <- ind_var[[j]]
+            val_df_list[[i]]$temp_var <- temp_var[[j]]
         }
         
         val_knots_df[[j]] <- dplyr::bind_rows(val_no_limit , val_df_list)
@@ -270,7 +270,7 @@ val_knots_df <- dplyr::bind_rows(val_knots_df)
 ```{r message=FALSE, warning=FALSE}
 ggplot(data = val_knots_df, mapping = aes(x = week, y = abs_resid)) +
   geom_smooth(aes(colour = knots)) +
-  facet_wrap(~ind_var)+
+  facet_wrap(~temp_var)+
   xlab("Week of 2012") +
   ylab("Absolute Residuals")
 
@@ -278,7 +278,7 @@ ggplot(data = val_knots_df, mapping = aes(x = week, y = abs_resid)) +
 ggplot(data = val_knots_df, mapping = aes(x = week, y = gcv)) +
   geom_point(aes(colour = knots)) +
   geom_smooth(aes(colour = knots)) +
-  facet_wrap(~ind_var)+
+  facet_wrap(~temp_var)+
   xlab("Week of 2012") +
   ylab("GCV Score") +
   coord_cartesian(ylim=c(0,15))
@@ -286,13 +286,13 @@ ggplot(data = val_knots_df, mapping = aes(x = week, y = gcv)) +
 ggplot(data = val_knots_df, mapping = aes(x = week, y = rsq)) +
   geom_point(aes(colour = knots)) +
   geom_smooth(aes(colour = knots)) +
-  facet_wrap(~ind_var)+
+  facet_wrap(~temp_var)+
   xlab("Week of 2012") +
   ylab("Adjusted R Squared")
 
 ggplot(data = val_knots_df, mapping = aes(x = abs_resid)) +
   geom_histogram(aes(fill = knots), colour = "grey") +
-  facet_wrap(~ind_var) +
+  facet_wrap(~temp_var) +
   xlab("Absolute Residual Values") +
   ylab("Count")+
   coord_cartesian(xlim=c(0,10))
@@ -466,4 +466,326 @@ ggplot(data = val_df.5, mapping = aes(x = week, y = gcv)) +
   theme(legend.position = "none")+
   xlab("Week of 2012") +
   ylab("Absolute Residual Values") 
+```
+
+show weekly variation
+```{r}
+df <- swns_stations_df_200 %>% filter(year == 2012, stationid == "AN1")
+ggplot(data = df, aes(x = week, y = temp_mean)) +
+  geom_point() +
+  geom_smooth(aes(se = FALSE)) +
+  labs(x = "Week of the Year 2012", y = "Mean Daily Temperature")
+```
+
+
+
+test knots for monthly models
+```{r,warning=FALSE, include=FALSE}
+# Generate models with daily mins, maxs and means
+temp_var <- list("min", "max", "mean")
+
+# Create list of three dataframes
+val_df_list <- list()
+# Loop over each option: min, max and mean
+for(i in seq_along(temp_var)){
+    val_df_list[[i]] <- validate_monthly_GAMs(model_stations_df = model_stations_df,
+                                            val_stations_df = val_stations_df,
+                                            years = 2012,
+                                            months = 1:12,
+                                            formula =paste0("temp_",temp_var[[i]],"~
+                                                         s(east,north) +
+                                                         s(dem, week)  +
+                                                         s(sum_irradiance, week) +
+                                                         s(tpi, week) + 
+                                                         s(ptoc, week, k =3) +
+                                                         s(asp_c, week)
+                                                         s(yday, k = 3)"),
+                                            alt_formula =paste0("temp_",temp_var[[i]],"~
+                                                         s(east,north) +
+                                                         s(dem, week)  +
+                                                         s(tpi, week) + 
+                                                         s(ptoc, week, k =3) +
+                                                         s(asp_c, week) +
+                                                         s(yday, k =3)")
+                                            ) 
+    val_df_list[[i]]$temp_var <- temp_var[[i]]
+    val_df_list[[i]]$knots   <- "no limit"
+}
+
+val_df <- dplyr::bind_rows(val_df_list)
+
+knots <- list(1, 5 ,9)
+temp_vars<- list("min","max","mean")
+val_knots_df <- list()
+for(j in seq_along(temp_vars)){# Generate models with daily mins, maxs and means
+        
+        val_no_limit<- filter(val_df, temp_var == temp_vars[[j]])
+        # Create list of three dataframes
+        val_df_list<- list()
+        # Loop over each option: min, max and mean
+        for(i in seq_along(knots)){
+            val_df_list[[i]] <- validate_monthly_GAMs(model_stations_df = model_stations_df,
+                                                    val_stations_df = val_stations_df,
+                                                    years = 2012,
+                                                    months = 1:12,
+                                                    formula =paste0("temp_",temp_vars[[j]],"~
+                                                                 s(east,north, k=",knots[[i]],") +
+                                                                 s(dem, week, k=",knots[[i]],")  +
+                                                                 s(sum_irradiance,week, k=",knots[[i]],") +
+                                                                 s(tpi, week,k=",knots[[i]],") + 
+                                                                 s(ptoc, week, k=3) +
+                                                                 s(asp_c, week, k=",knots[[i]],")
+                                                                 s(yday, k = 3)"),
+                                                    alt_formula =paste0("temp_",temp_vars[[j]]," ~
+                                                                 s(east,north, k=",knots[[i]],") +
+                                                                 s(dem, k=",knots[[i]],")  +
+                                                                 s(asp_c, week",knots[[i]],")
+                                                                 s(tpi, k=",knots[[i]],") + 
+                                                                 s(ptoc, k=3)+
+                                                                 s(yday, k = 3)")
+                                                    ) 
+            val_df_list[[i]]$knots <- as.character(knots[[i]])
+            val_df_list[[i]]$temp_var <- temp_var[[j]]
+        }
+        
+        val_knots_df[[j]] <- dplyr::bind_rows(val_no_limit , val_df_list)
+}
+
+val_knots_monthly_df <- dplyr::bind_rows(val_knots_df)
+
+
+
+ggplot(data = val_knots_daily_df, mapping = aes(x = week, y = abs_resid)) +
+  geom_smooth(aes(colour = knots)) +
+  facet_wrap(~temp_var)+
+  xlab("Week of 2012") +
+  ylab("Absolute Residuals")
+
+  
+ggplot(data = val_knots_daily_df, mapping = aes(x = week, y = gcv)) +
+  geom_point(aes(colour = knots)) +
+  geom_smooth(aes(colour = knots)) +
+  facet_wrap(~temp_var)+
+  xlab("Week of 2012") +
+  ylab("GCV Score") +
+  coord_cartesian(ylim=c(0,15))
+
+ggplot(data = val_knots_daily_df, mapping = aes(x = week, y = rsq)) +
+  geom_point(aes(colour = knots)) +
+  geom_smooth(aes(colour = knots)) +
+  facet_wrap(~temp_var)+
+  xlab("Week of 2012") +
+  ylab("Adjusted R Squared")
+
+ggplot(data = val_knots_df, mapping = aes(x = abs_resid)) +
+  geom_histogram(aes(fill = knots), colour = "grey") +
+  facet_wrap(~temp_var) +
+  xlab("Absolute Residual Values") +
+  ylab("Count")+
+  coord_cartesian(xlim=c(0,10))
+
+
+
+
+
+```
+
+
+
+test knots for daily models
+```{r,warning=FALSE, include=FALSE}
+# Generate models with daily mins, maxs and means
+temp_var <- list("min", "max", "mean")
+
+# Create list of three dataframes
+val_df_list <- list()
+# Loop over each option: min, max and mean
+for(i in seq_along(temp_var)){
+    val_df_list[[i]] <- validate_daily_GAMs(model_stations_df = model_stations_df,
+                                            val_stations_df = val_stations_df,
+                                            years = 2012,
+                                            days = 1:365,
+                                            formula =paste0("temp_",temp_var[[i]],"~
+                                                         s(east,north) +
+                                                         s(dem)  +
+                                                         s(sum_irradiance) +
+                                                         s(tpi) + 
+                                                         s(ptoc, k = 3)"),
+                                            alt_formula =paste0("temp_",temp_var[[i]],"~
+                                                         s(east,north) +
+                                                         s(dem)  +
+                                                         s(tpi) + 
+                                                         s(ptoc, k = 3)")
+                                            ) 
+    val_df_list[[i]]$temp_var <- temp_var[[i]]
+    val_df_list[[i]]$knots   <- "no limit"
+}
+
+val_df <- dplyr::bind_rows(val_df_list)
+
+knots <- list(1, 5 ,9)
+temp_vars<- list("min","max","mean")
+val_knots_df <- list()
+for(j in seq_along(temp_vars)){# Generate models with daily mins, maxs and means
+        
+        val_no_limit<- filter(val_df, temp_var == temp_vars[[j]])
+        # Create list of three dataframes
+        val_df_list<- list()
+        # Loop over each option: min, max and mean
+        for(i in seq_along(knots)){
+            val_df_list[[i]] <- validate_daily_GAMs(model_stations_df = model_stations_df,
+                                                    val_stations_df = val_stations_df,
+                                                    years = 2012,
+                                                    days = 1:365,
+                                                    formula =paste0("temp_",temp_vars[[j]],"~
+                                                                 s(east,north, k=",knots[[i]],") +
+                                                                 s(dem, k=",knots[[i]],")  +
+                                                                 s(sum_irradiance, k=",knots[[i]],") +
+                                                                 s(tpi, k=",knots[[i]],") + 
+                                                                 s(ptoc, k=3)"),
+                                                    alt_formula =paste0("temp_",temp_vars[[j]]," ~
+                                                                 s(east,north, k=",knots[[i]],") +
+                                                                 s(dem, k=",knots[[i]],")  +
+                                                                 s(tpi, k=",knots[[i]],") + 
+                                                                 s(ptoc, k=3)")
+                                                    ) 
+            val_df_list[[i]]$knots <- as.character(knots[[i]])
+            val_df_list[[i]]$temp_var <- temp_var[[j]]
+        }
+        
+        val_knots_df[[j]] <- dplyr::bind_rows(val_no_limit , val_df_list)
+}
+
+val_knots_daily_df <- dplyr::bind_rows(val_knots_df)
+
+
+
+ggplot(data = val_knots_daily_df, mapping = aes(x = week, y = abs_resid)) +
+  geom_smooth(aes(colour = knots)) +
+  facet_wrap(~temp_var)+
+  xlab("Week of 2012") +
+  ylab("Absolute Residuals")
+
+  
+ggplot(data = val_knots_daily_df, mapping = aes(x = week, y = gcv)) +
+  geom_point(aes(colour = knots)) +
+  geom_smooth(aes(colour = knots)) +
+  facet_wrap(~temp_var)+
+  xlab("Week of 2012") +
+  ylab("GCV Score") +
+  coord_cartesian(ylim=c(0,15))
+
+ggplot(data = val_knots_daily_df, mapping = aes(x = week, y = rsq)) +
+  geom_point(aes(colour = knots)) +
+  geom_smooth(aes(colour = knots)) +
+  facet_wrap(~temp_var)+
+  xlab("Week of 2012") +
+  ylab("Adjusted R Squared")
+
+ggplot(data = val_knots_df, mapping = aes(x = abs_resid)) +
+  geom_histogram(aes(fill = knots), colour = "grey") +
+  facet_wrap(~temp_var) +
+  xlab("Absolute Residual Values") +
+  ylab("Count")+
+  coord_cartesian(xlim=c(0,10))
+
+```
+
+test knots for weeklymodels
+```{r,warning=FALSE, include=FALSE}
+# Generate models with daily mins, maxs and means
+temp_var <- list("min", "max", "mean")
+
+# Create list of three dataframes
+val_df_list <- list()
+# Loop over each option: min, max and mean
+for(i in seq_along(temp_var)){
+    val_df_list[[i]] <- validate_weekly_GAMs(model_stations_df = model_stations_df,
+                                            val_stations_df = val_stations_df,
+                                            years = 2012,
+                                            weeks = 1:52,
+                                            formula =paste0("temp_",temp_var[[i]],"~
+                                                         s(east,north) +
+                                                         s(dem, yday)  +
+                                                         s(sum_irradiance, yday) +
+                                                         s(tpi, yday) + 
+                                                         s(ptoc, k = 3)"),
+                                            alt_formula =paste0("temp_",temp_var[[i]],"~
+                                                         s(east,north, yday) +
+                                                         s(dem, yday)  +
+                                                         s(tpi, yday) + 
+                                                         s(ptoc, yday, k = 3)")
+                                            ) 
+    val_df_list[[i]]$temp_var <- temp_var[[i]]
+    val_df_list[[i]]$knots   <- "no limit"
+}
+
+val_df <- dplyr::bind_rows(val_df_list)
+
+knots <- list(1, 5 ,9)
+temp_vars<- list("min","max","mean")
+val_knots_df <- list()
+for(j in seq_along(temp_vars)){# Generate models with daily mins, maxs and means
+        
+        val_no_limit<- filter(val_df, temp_var == temp_vars[[j]])
+        # Create list of three dataframes
+        val_df_list<- list()
+        # Loop over each option: min, max and mean
+        for(i in seq_along(knots)){
+            val_df_list[[i]] <- validate_weekly_GAMs(model_stations_df = model_stations_df,
+                                                    val_stations_df = val_stations_df,
+                                                    years = 2012,
+                                                    weeks = 1:52,
+                                                    formula =paste0("temp_",temp_vars[[j]],"~
+                                                                 s(east,north, k=",knots[[i]],") +
+                                                                 s(dem, yday,k=",knots[[i]],")  +
+                                                                 s(sum_irradiance, yday, k=",knots[[i]],") +
+                                                                 s(tpi,yday, k=",knots[[i]],") + 
+                                                                 s(ptoc,yday, k=3)"),
+                                                    alt_formula =paste0("temp_",temp_vars[[j]]," ~
+                                                                 s(east,north, k=",knots[[i]],") +
+                                                                 s(dem, yday,k=",knots[[i]],")  +
+                                                                 s(tpi,yday, k=",knots[[i]],") + 
+                                                                 s(ptoc, yday,k=3)")
+                                                    ) 
+            val_df_list[[i]]$knots <- as.character(knots[[i]])
+            val_df_list[[i]]$temp_var <- temp_var[[j]]
+        }
+        
+        val_knots_df[[j]] <- dplyr::bind_rows(val_no_limit , val_df_list)
+}
+
+val_knots_weekly_df <- dplyr::bind_rows(val_knots_df)
+
+
+
+ggplot(data = val_knots_daily_df, mapping = aes(x = week, y = abs_resid)) +
+  geom_smooth(aes(colour = knots)) +
+  facet_wrap(~temp_var)+
+  xlab("Week of 2012") +
+  ylab("Absolute Residuals")
+
+  
+ggplot(data = val_knots_daily_df, mapping = aes(x = week, y = gcv)) +
+  geom_point(aes(colour = knots)) +
+  geom_smooth(aes(colour = knots)) +
+  facet_wrap(~temp_var)+
+  xlab("Week of 2012") +
+  ylab("GCV Score") +
+  coord_cartesian(ylim=c(0,15))
+
+ggplot(data = val_knots_daily_df, mapping = aes(x = week, y = rsq)) +
+  geom_point(aes(colour = knots)) +
+  geom_smooth(aes(colour = knots)) +
+  facet_wrap(~temp_var)+
+  xlab("Week of 2012") +
+  ylab("Adjusted R Squared")
+
+ggplot(data = val_knots_df, mapping = aes(x = abs_resid)) +
+  geom_histogram(aes(fill = knots), colour = "grey") +
+  facet_wrap(~temp_var) +
+  xlab("Absolute Residual Values") +
+  ylab("Count")+
+  coord_cartesian(xlim=c(0,10))
+
 ```

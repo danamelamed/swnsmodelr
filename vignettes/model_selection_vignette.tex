@@ -1,0 +1,312 @@
+\documentclass[]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{unicode=true,
+            pdftitle={Model Selection},
+            pdfborder={0 0 0},
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\IfFileExists{parskip.sty}{%
+\usepackage{parskip}
+}{% else
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{0}
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+\let\oldparagraph\paragraph
+\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+\let\oldsubparagraph\subparagraph
+\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+%%% Use protect on footnotes to avoid problems with footnotes in titles
+\let\rmarkdownfootnote\footnote%
+\def\footnote{\protect\rmarkdownfootnote}
+
+%%% Change title format to be more compact
+\usepackage{titling}
+
+% Create subtitle command for use in maketitle
+\newcommand{\subtitle}[1]{
+  \posttitle{
+    \begin{center}\large#1\end{center}
+    }
+}
+
+\setlength{\droptitle}{-2em}
+  \title{Model Selection}
+  \pretitle{\vspace{\droptitle}\centering\huge}
+  \posttitle{\par}
+  \author{}
+  \preauthor{}\postauthor{}
+  \date{}
+  \predate{}\postdate{}
+
+
+\begin{document}
+\maketitle
+
+Daily mean temperatures in Nova Scotia were interpolated based on models
+selected from testing on a subset of temperatures from 2012. The amount
+of records in one day was insufficient to build daily models, given the
+quantity of covariates we wish to include. Generating models on a weekly
+basis, with smooth terms that are dependent on the day of the year,
+allows for all covariates to be used, and for daily variability to still
+be addressed.\\
+The models were generated over the study station data, plus data from
+some external stations that were located at unrepresented areas of SWNS.
+The model accuracies were validated by running them over external
+stations, plus some study stations, since many external stations are in
+very close proximity to study stations.
+
+\subsubsection{Determining stations for modelling and
+validating}\label{determining-stations-for-modelling-and-validating}
+
+In the package \texttt{swnsmodelr}, temperature records from 98 stations
+in SWNS for the years 2012 - 2018 are stored in the data frame
+\texttt{swns\_stations\_df}. The station I.D.s for the study stations
+and external stations are stored as lists in
+\texttt{study\_stations\_list} and \texttt{external\_stations\_list},
+respectively. The locations of these two lists of stations are plotted
+in Figure 1 over a digital elevation model (DEM) of SWNS, after
+filtering \texttt{swns\_stations\_df} by the two lists.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{study_stations_df <-}\StringTok{ }\NormalTok{swns_stations_df }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter}\NormalTok{(stationid }\OperatorTok{%in%}\StringTok{ }\NormalTok{study_stations_list)}
+\NormalTok{ext_stations_df  <-}\StringTok{ }\NormalTok{swns_stations_df }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter}\NormalTok{(stationid }\OperatorTok{%in%}\StringTok{ }\NormalTok{ext_stations_list)}
+
+\NormalTok{study_stations_sp <-}\StringTok{ }\NormalTok{study_stations_df }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter}\NormalTok{(}\OperatorTok{!}\KeywordTok{duplicated}\NormalTok{(stationid))}
+\KeywordTok{coordinates}\NormalTok{(study_stations_sp) =}\StringTok{ }\ErrorTok{~}\StringTok{ }\NormalTok{EASTING  }\OperatorTok{+}\StringTok{ }\NormalTok{NORTHING}
+
+\NormalTok{ext_stations_sp <-}\StringTok{ }\NormalTok{ext_stations_df }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter}\NormalTok{(}\OperatorTok{!}\KeywordTok{duplicated}\NormalTok{(stationid))}
+\KeywordTok{coordinates}\NormalTok{(ext_stations_sp) =}\StringTok{ }\ErrorTok{~}\StringTok{ }\NormalTok{EASTING  }\OperatorTok{+}\StringTok{ }\NormalTok{NORTHING}
+
+\KeywordTok{plot}\NormalTok{(rasters_list[[}\DecValTok{1}\NormalTok{]])}
+\KeywordTok{points}\NormalTok{(study_stations_sp, }\DataTypeTok{pch =} \DecValTok{0}\NormalTok{)}
+\KeywordTok{points}\NormalTok{(ext_stations_sp, }\DataTypeTok{pch =} \DecValTok{5}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{figure}
+\centering
+\includegraphics{model_selection_vignette_files/figure-latex/unnamed-chunk-49-1.pdf}
+\caption{\textbf{Figure 1}: Locations of study stations (square, n = 72)
+and external stations (diamond, n = 27) in Southwest Nova Scotia.}
+\end{figure}
+
+The study stations alone do not provide sufficient coverage of SWNS in
+the eastern most portion surrouding the Halifax area, and the Annapolis
+valley. There are external locations in those areas which were included
+in the model stations along with the study stations.
+
+\begin{itemize}
+\tightlist
+\item
+  The region around Halifax doesn't have coverage of study stations.
+\item
+  Many external stations are basically overlapping study stations, which
+  would give biased estimate of accuracy.
+\item
+  Therefore, model stations will be study stations but also include some
+  external stations.
+\item
+  Validation stations will be external stations and some study stations
+  that are a good distance from model stations.
+\item
+  The data frame swns\_stations\_df\_200 has temperature data from all
+  stations plus environmental variables from 200m resolution.
+\item
+  It will be divided into the model stations and validation stations.
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# MODEL STATIONS}
+\NormalTok{swns_stations_df_}\DecValTok{200}\NormalTok{ <-}\StringTok{ }\KeywordTok{add_date_columns}\NormalTok{(swns_stations_df_}\DecValTok{200}\NormalTok{)}
+
+\NormalTok{## dataframe}
+\NormalTok{model_stations_df <-}\StringTok{ }\NormalTok{swns_stations_df_}\DecValTok{200} \OperatorTok{%>%}
+\StringTok{          }\CommentTok{# Include all study stations}
+\StringTok{  }\KeywordTok{filter}\NormalTok{(stationid }\OperatorTok{%in%}\StringTok{ }\NormalTok{study_stations_list }\OperatorTok{|}
+\StringTok{          }\CommentTok{# Included these ext stations}
+\StringTok{          }\NormalTok{stationid }\OperatorTok{%in%}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"6354"}\NormalTok{,}\StringTok{"47187"}\NormalTok{,}\StringTok{"6456"}\NormalTok{,}\StringTok{"DNR025"}\NormalTok{,}\StringTok{"6497"}\NormalTok{)) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{          }\CommentTok{# Remove these study stations}
+\StringTok{  }\KeywordTok{filter}\NormalTok{((stationid }\OperatorTok{%in%}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"YA4"}\NormalTok{,}\StringTok{"S160"}\NormalTok{,}\StringTok{"AN3"}\NormalTok{,}\StringTok{"CL4"}\NormalTok{,}\StringTok{"CH4"}\NormalTok{,}
+                           \StringTok{"KE5"}\NormalTok{,}\StringTok{"WE5"}\NormalTok{,}\StringTok{"WE2"}\NormalTok{,}\StringTok{"LI2"}\NormalTok{,}\StringTok{"BR3"}\NormalTok{,}\StringTok{"MI5"}\NormalTok{)) }\OperatorTok{==}\StringTok{ }\OtherTok{FALSE}\NormalTok{)}
+\NormalTok{## spatial points object}
+\NormalTok{model_stations_sp <-}\StringTok{ }\NormalTok{model_stations_df }\OperatorTok{%>%}
+\StringTok{                      }\KeywordTok{filter}\NormalTok{(}\OperatorTok{!}\KeywordTok{duplicated}\NormalTok{(stationid))}
+\KeywordTok{coordinates}\NormalTok{(model_stations_sp) =}\StringTok{ }\ErrorTok{~}\StringTok{ }\NormalTok{EASTING }\OperatorTok{+}\StringTok{ }\NormalTok{NORTHING}
+
+
+\CommentTok{# VALIDATION STATIONS}
+
+\NormalTok{## dataframe}
+\NormalTok{val_stations_df   <-}\StringTok{ }\NormalTok{swns_stations_df_}\DecValTok{200} \OperatorTok{%>%}\StringTok{ }
+\StringTok{          }\CommentTok{# Include all ext stations}
+\StringTok{  }\KeywordTok{filter}\NormalTok{(stationid }\OperatorTok{%in%}\StringTok{ }\NormalTok{ext_stations_list  }\OperatorTok{|}\StringTok{    }
+\StringTok{          }\CommentTok{# Add these study stations}
+\StringTok{           }\NormalTok{stationid }\OperatorTok{%in%}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"YA4"}\NormalTok{,}\StringTok{"S160"}\NormalTok{,}\StringTok{"AN3"}\NormalTok{,}\StringTok{"CL4"}\NormalTok{,}\StringTok{"KE5"}\NormalTok{,}\StringTok{"WE5"}\NormalTok{,}\StringTok{"WE2"}\NormalTok{,}\StringTok{"LI2"}\NormalTok{,}\StringTok{"CH4"}\NormalTok{)) }\OperatorTok{%>%}
+\StringTok{          }\CommentTok{# Remove these ext stations}
+\StringTok{  }\KeywordTok{filter}\NormalTok{(}\OperatorTok{!}\NormalTok{(stationid }\OperatorTok{%in%}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"6354"}\NormalTok{, }\StringTok{"47187"}\NormalTok{, }\StringTok{"6456"}\NormalTok{,}\StringTok{"27141"}\NormalTok{, }\StringTok{"DLG006"}\NormalTok{, }\StringTok{"DNR024"}\NormalTok{,}
+                            \StringTok{"6501"}\NormalTok{, }\StringTok{"DNR025"}\NormalTok{, }\StringTok{"DNR003"}\NormalTok{, }\StringTok{"6497"}\NormalTok{)             }
+\NormalTok{           )}
+\NormalTok{         )         }
+
+\NormalTok{## spatial points object}
+\NormalTok{val_stations_sp   <-}\StringTok{ }\NormalTok{val_stations_df  }\OperatorTok{%>%}
+\StringTok{                      }\KeywordTok{filter}\NormalTok{(}\OperatorTok{!}\KeywordTok{duplicated}\NormalTok{(stationid))}
+\KeywordTok{coordinates}\NormalTok{(val_stations_sp) =}\StringTok{ }\ErrorTok{~}\StringTok{ }\NormalTok{EASTING }\OperatorTok{+}\StringTok{ }\NormalTok{NORTHING}
+
+\CommentTok{# Make plot}
+\KeywordTok{plot}\NormalTok{(rasters_list[[}\DecValTok{1}\NormalTok{]])}
+\KeywordTok{points}\NormalTok{(model_stations_sp, }\DataTypeTok{pch =} \DecValTok{0}\NormalTok{) }\CommentTok{# squares }
+\KeywordTok{points}\NormalTok{(val_stations_sp, }\DataTypeTok{pch =} \DecValTok{5}\NormalTok{) }\CommentTok{# diamonds}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{model_selection_vignette_files/figure-latex/unnamed-chunk-50-1.pdf}
+
+\subsubsection{Generating the test
+models}\label{generating-the-test-models}
+
+\begin{itemize}
+\tightlist
+\item
+  More precise predictions made at daily scale. However, n too small for
+  amount of variables.
+\item
+  Issue negated by creating weekly models, with variables that are
+  dependent on the day.
+\item
+  Need to determine whether modelling temperatures maximums and minimums
+  separating is more accurate than temperature means.
+\item
+  With the function validate\_weekly\_GAMs, model statistics and
+  residuals are added to the validation stations dataframe.
+\item
+  In a for loop, the same model was run on the min, max and mean. The
+  data frame is bound in the long format to be compatible with plotting
+  by ggplot.
+\end{itemize}
+
+Visualing the GCV scores strongly suggests that the daily temperature
+mean is more appropriate for modelling than the daily minimum or
+maximum. The GCV score is consistently below one for the daily
+temperature means, whereas daily minimums and maximum hover around 2.
+
+```\{ r eval=FALSE, include=FALSE warning=FALSE\}
+
+ggplot(data = val\_df, mapping = aes(x = yday, y = gcv)) +
+geom\_smooth(aes(linetype = model\_opt))
+
+```
+
+A frequency plot (or density, in R), shows that the daily mean
+temperature has the most residuals around zero. The steepness of the
+slope for daily temperature means also suggests there are less residuals
+of a higher values relative to daily minimum and maximum temperatures.
+
+\texttt{\{\ r\ eval=FALSE,\ include=FALSE\ warning=FALSE\}\ ggplot(data\ =\ val\_df,\ mapping\ =\ aes(x\ =\ abs\_resid))\ +\ \ \ geom\_density(aes(colour\ =\ model\_opt))}
+
+-When the residuals are plotted daily for each month, mean temperature
+has the lowest smooth line for a majority of the months. - However,
+something strange is happening at the end of June. Since all the data
+values on this day seem ordinary, something must be happening with the
+model.
+
+\begin{itemize}
+\tightlist
+\item
+  So far, GAM has been used without putting limitations on knots.
+\item
+  It was found that limiting the number of knots worked to reduced the
+  erroneous residuals
+\end{itemize}
+
+What if i restrict easting and northing to k = 9 also?
+
+The models without knot limitations on E\&N and ptoc = 3 look smaller..
+t test to make sure..
+
+
+\end{document}
