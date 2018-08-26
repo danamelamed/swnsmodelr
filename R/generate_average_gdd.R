@@ -32,7 +32,9 @@ j = 1
   }
 extra_days <- extra_days %>% unlist()
 gdd_rasters_df <- gdd_rasters_df[-c(extra_days), ]
-  
+   
+
+
 
 
 }
