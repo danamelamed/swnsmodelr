@@ -1,15 +1,15 @@
 #' Generate daily mean temperature raster with GAM
-predict_rasters <- function(start_date,
-                                  end_date,
-                                  formula,
-                                  alt_formula,
-                                  temperatures_df,
-                                  raster_brick,
-                                  temporal_rasters_df = 1,
-                                  output_folder,
-                                  output_ext,
-                                  verbose = TRUE
-                                  ){
+predict_mean_daily_rasters <- function(start_date,
+                                          end_date,
+                                          formula,
+                                          alt_formula,
+                                          temperatures_df,
+                                          raster_brick,
+                                          temporal_rasters_df = 1,
+                                          output_folder,
+                                          output_ext,
+                                          verbose = TRUE
+                                          ){
 
         
         start_date = ymd('2017-01-26')
