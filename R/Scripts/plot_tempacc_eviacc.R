@@ -19,12 +19,13 @@ evi_df <- evi_df %>% mutate(temp_mean_acc = cumsum(temp_mean)) %>%
   mutate(temp_max_acc = cumsum(temp_max))
 
 
-par(mfrow = c(3,2))
-for(y in unique(evi_df$year)){
-  evi_year <- evi_df %>% filter(year== y)
-  for(i in unique(evi_df$stationid)){
+
+for(y in unique(evi_df$stationid)){
+  evi_year <- evi_df %>% filter(stationid== y)
+  par(mfrow = c(3,2))
+  for(i in unique(evi_df$year)){
     par(mar = c(5,5,2,5))
-    evi_now <- evi_year %>% filter(stationid == i,
+    evi_now <- evi_year %>% filter(year == i,
                                  !is.na(temp_mean),
                                  !is.na(evi))
     if(length(evi_now[[1]]) >5){
@@ -32,20 +33,58 @@ for(y in unique(evi_df$year)){
                                     temp_min_acc  = cumsum(temp_min) ,
                                     temp_max_acc  = cumsum(temp_max) ,
                                     evi_acc       = cumsum(evi))
-      with(evi_now, plot(yday, temp_mean_acc, col = "red", pch = 20,
+      with(evi_now, plot(yday, temp_mean_acc, col = "red", type = "l", 
                         ylab = "Temperature[Mean, Accumulated]",
+                        ylim = c(-100,500),
                         xlab = "Day of the Year",
-                        main = paste(i,y, "cor=", round(cor(temp_mean_acc,evi_acc),3),sep = " ")))
+                        main = paste("id=",y,"yr=",i, "cor=", round(cor(temp_mean_acc,evi_acc),3),sep = " ")))
       par(new=T)
-      with(evi_now, plot(yday, evi_acc, col = "dark green", pch = 20,
+      with(evi_now, plot(yday, evi_acc, col = "dark green", type = "l",
                          axes = F,
                          ylab = NA,
+                         ylim = c(0,300000),
                          xlab = NA))
       axis(side =4)
-      mtext(side = 4, line =3, expression(EVI/1000))
+      mtext(side = 4, line =3, "EVI")
       
       legend("topleft",
-             legend=c(expression(Temperature[MeanAccumulated]), expression(EVI/1000)),pch = 20, col = c("red","dark green"))
+             legend=c(expression(Temperature[MeanAccumulated]), "EVI") ,pch = 20, col = c("red","dark green"))
+    }
+  }
+}
+
+
+# i use this with other covariates?
+
+for(y in unique(evi_df$stationid)){
+  evi_year <- evi_df %>% filter(stationid== y)
+  par(mfrow = c(3,2))
+  for(i in unique(evi_df$year)){
+    par(mar = c(5,5,2,5))
+    evi_now <- evi_year %>% filter(year == i,
+                                   !is.na(temp_mean),
+                                   !is.na(evi))
+    if(length(evi_now[[1]]) >5){
+      evi_now <- evi_now %>% mutate(temp_mean_acc = cumsum(temp_mean),
+                                    temp_min_acc  = cumsum(temp_min) ,
+                                    temp_max_acc  = cumsum(temp_max) ,
+                                    evi_acc       = cumsum(evi))
+      with(evi_now, plot(yday, temp_mean_acc, col = "red", type = "l", 
+                         ylab = "Temperature[Mean, Accumulated]",
+                         ylim = c(-100,500),
+                         xlab = "Day of the Year",
+                         main = paste("id=",y,"yr=",i, "cor=", round(cor(temp_mean_acc,evi_acc),3),sep = " ")))
+      par(new=T)
+      with(evi_now, plot(yday, evi_acc, col = "dark green", type = "l",
+                         axes = F,
+                         ylab = NA,
+                         ylim = c(0,300000),
+                         xlab = NA))
+      axis(side =4)
+      mtext(side = 4, line =3, "EVI")
+      
+      legend("topleft",
+             legend=c(expression(Temperature[MeanAccumulated]), "EVI") ,pch = 20, col = c("red","dark green"))
     }
   }
 }
