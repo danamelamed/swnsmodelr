@@ -12,14 +12,14 @@ predict_rasters <- function(start_date,
                                           verbose = TRUE
                                           ){
 
-        par(mfrow = c(2,2))
+        par(mfrow = c(1,2))
         for (i in 1:(start_date-end_date)[[1]]){
                 date_now <- start_date  - 1 + i
                 
                 # subset stations by date
                 daily_df = temperatures_df %>% filter(date_time == date_now)
                 daily_val_df = validation_df %>% filter(date_time == date_now)
-                
+                print(length(daily_df))
                 
         
         
@@ -29,8 +29,8 @@ predict_rasters <- function(start_date,
                 # If it does, a back-up model without sum_irradiance is run
                 m <- try(gam(temp_mean ~
                            s(east,north) +
-                           s(east, k =3) +
-                           s(north, k= 3) +
+                           #s(east, k =3) +
+                           #s(north, k= 3) +
                            s(dem, k =3) +
                            s(sum_irradiance) +
                            s(tpi) +
@@ -44,8 +44,8 @@ predict_rasters <- function(start_date,
                 if("try-error" %in% class(m)){
                         m <- gam(temp_mean ~
                                        s(east,north) +
-                                       s(east, k =3) +
-                                       s(north, k= 3)+
+                                       #s(east, k =3) +
+                                       #s(north, k= 3)+
                                        s(dem, k =3) +
                                        s(tpi) +
                                        s(ptoc, k= 3) +
