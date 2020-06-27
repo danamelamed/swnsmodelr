@@ -9,15 +9,15 @@ accumulate_at_stations <- function(temperatures_df,
 
   
   
-  # discard rows where acc_col = NA
-  df <- temperatures_df %>% dplyr::filter(!is.na(acc_col))
+  # set to 0 rows where acc_col = NA
+  df <- temperatures_df %>% mutate(!!as.symbol(acc_col), ifelse(is.na(!!as.symbol(acc_col)),0,!!as.symbol(acc_col)))
   
   # create output data frame
-  output_df <- df %>% dplyr::filter(is.na(acc_col))
+  output_df <- df  %>% dplyr::filter(is.na(acc_col))
   out_col <- paste(acc_col,'acc',sep='_')
   # break down into stations, accumulate, put back together
   for(station in stations){
-    station_df <- df %>% dplyr::filter(!!as.symbol(stations_col) == station) %>% 
+    station_df <- df  %>% dplyr::filter(!!as.symbol(stations_col) == station) %>% 
       dplyr::arrange(!!as.symbol(stations_col) ) %>%   
       dplyr::mutate(out_col = cumsum(!!as.symbol(acc_col)))
     output_df <- dplyr::bind_rows(output_df, station_df)
