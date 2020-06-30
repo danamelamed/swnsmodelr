@@ -22,11 +22,12 @@ evi_df <- evi_df %>% mutate(temp_mean_acc = cumsum(temp_mean)) %>%
 
 for(y in unique(evi_df$stationid)){
   evi_year <- evi_df %>% filter(stationid== y)
-  par(mfrow = c(3,2))
+  #par(mfrow = c(2,2))
   for(i in unique(evi_df$year)){
     par(mar = c(5,5,2,5))
     evi_now <- evi_year %>% filter(year == i,
                                  !is.na(temp_mean),
+                                 (temp_mean > 0),
                                  !is.na(evi))
     if(length(evi_now[[1]]) >5){
       evi_now <- evi_now %>% mutate(temp_mean_acc = cumsum(temp_mean),
