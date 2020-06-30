@@ -44,7 +44,8 @@ predict_rasters <- function(start_date,
                            s(sum_irradiance) +
                            s(tpi) +
                            s(ptoc, k= 3) +
-                           s(asp, k= 3),
+                           s(asp, k= 3) +
+                                   gdd_zones,
                          data = daily_df))
                 
                 
@@ -58,7 +59,8 @@ predict_rasters <- function(start_date,
                                        s(dem, k =3) +
                                        s(tpi) +
                                        s(ptoc, k= 3) +
-                                       s(asp, k= 3),
+                                       s(asp, k= 3) +
+                                         gdd_zones,
                                data = daily_df)}
         
                     
@@ -121,16 +123,20 @@ predict_rasters <- function(start_date,
                 # plot rasters and residuals for each day
                 if(verbose){
                 # plot predicted raster 
-                        par(mfrow = c(1,2))
-                        plot(prediction_raster)
+                        
+                        plot(prediction_raster, main = date_now)
                         # add validation stations
-                        points(daily_val_df$east, daily_val_df$north, size = daily_val_df$resid)
-                        text(daily_val_df$east, daily_val_df$north,labels= daily_val_df$ID)
+                        points(daily_val_df$east, daily_val_df$north, pch = 20)
+                        #text(daily_val_df$east, daily_val_df$north,labels= daily_val_df$ID)
                         
                         
                         # plot actual and predicted validation values
-                        plot(daily_val_df$ID,daily_val_df$temp_mean)
+                        plot(daily_val_df$ID,daily_val_df$temp_mean, pch = 20, col = "black",
+                             ylab = "Daily Temperature Average", xlab = 'Stations',main = date_now)
                         points(daily_val_df$ID, daily_val_df$pred, pch=20 , col="red")
+                        legend("topleft",
+                               legend=c('Actual', "Estimated") ,pch = 20, col = c("black","red"))
+                        
                 }
                 
                 #plot residual box plots for each month
@@ -139,7 +145,7 @@ predict_rasters <- function(start_date,
                    month_now <- month(date_now)
                    daily_val_df_month <- bind_rows(daily_val_df_month, daily_val_df)
                    if(month_now != current_month | date_now == (end_date-1)){
-                           boxplot(resid ~ date_time, daily_val_df_month, ylim = c(-5,5))
+                           boxplot(resid ~ date_time, daily_val_df_month, ylim = c(-10,30))
                            current_month <- month_now
                            daily_val_df_month <- empty_df
                            
