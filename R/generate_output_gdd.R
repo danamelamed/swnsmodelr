@@ -19,12 +19,6 @@
 #' Plots pane. If the pane is too small, an error will cause the script to stop running.
 #' @export
 #' 
-daily_average_rasters_df <- make_temporal_raster_df(file.path("E:","Daily","Daily_Temp_Mean"),
-                                                    ymd("2012-01-01"),
-                                                    ymd("2012-12-31"),
-                                                    date_chars = c(10,19),
-                                                    date_format = "%Y-%m-%d")
-daily_average_rasters_df <- daily_average_rasters_df %>% add_date_columns
 generate_gdd_output <- function(daily_average_rasters_df,
                                 gdd_base,
                                 start_date,

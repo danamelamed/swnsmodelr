@@ -2,7 +2,9 @@
 title: "GDD vs. EVI Investigation"
 author: "Dana Melamed"
 date: "June 28, 2018"
-output:   word_document
+output:
+  word_document: default
+  pdf_document: default
 ---
 
 

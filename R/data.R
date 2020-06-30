@@ -14,8 +14,8 @@
 
 #' Weather stations points in Southwest Nova Scotia
 #' 
-#' A spatial object with 
-
+#' A spatial object with one point for each station 
+'swns_stations_sp'
 
 
 
