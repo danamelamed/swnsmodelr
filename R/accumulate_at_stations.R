@@ -20,7 +20,7 @@ accumulate_at_stations <- function(temperatures_df,
   # create output data frame
   
   output_df <- df %>% filter(date_time == "1-1-1")
-  out_col <- paste(acc_col,'acc',sep='_')
+ 
   # break down into years
   for(y in unique(df$year)){
     year_df_now <- df %>% dplyr::filter(df$year == y)
