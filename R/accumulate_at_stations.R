@@ -3,7 +3,9 @@ accumulate_at_stations <- function(temperatures_df,
                                    acc_col,
                                    stations_col = "stationid",
                                    dates_col = "date_time",
-                                   out_col = 'out_col'){
+                                   out_col = 'out_col',
+                                   gdd = FALSE,
+                                   gdd_base = NA){
   
 
   #rename columns for now
@@ -14,9 +16,12 @@ accumulate_at_stations <- function(temperatures_df,
   
   # set to 0 rows where acc_col = NA
   df <- temperatures_df %>% 
-    mutate(acc_col = if_else(is.na(acc_col),0,acc_col))%>%
-    filter(acc_col > 0)
+    mutate(acc_col = if_else(is.na(acc_col),0,acc_col))
   
+  # if gdd... apply base
+  if(gdd){
+   df <- df %>% filter(acc_col > gdd_base)
+  }
   # create output data frame
   
   output_df <- df %>% filter(date_time == "1-1-1")
