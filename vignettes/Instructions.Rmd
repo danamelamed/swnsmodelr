@@ -3,27 +3,27 @@ title: "swnsmodelr R Package Manual"
 author: "Dana Melamed"
 date: "June 7, 2018"
 output:
-  rmarkdown::word_document:
+  rmarkdown::html_document:
     fig_caption: yes
 indent: true
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(error = TRUE)
 library(swnsmodelr)
 library(ggplot2)
 ```
 
 ## Introduction
 
-  The swnsmodelr package was designed for users to easily model SWNS weather station data with rasters and models of their chosing. The package contains functions and weather station data, and input rasters are contained within the package's R project. 
+  The `swnsmodelr` package was designed for users to easily model SWNS weather station data with rasters, stations, input variable(s) and models of their choosing. The package contains functions and weather station data, and input rasters are contained within the package's R project. 
 This document follows a workflow of preparing data, generating models, and generating outputs. The objects generated at the various steps in the example are stored in swnsmodelr. 
 
 
+## Exract Rasters Values to Weather Station Data
 
-## Exract Rasters to Weather Station Data
-
-  The first step in modelling weather station data with rasters is to extract raster values to corresponding weather station records.  For many rasters, (ex: elevation, proximity to coast, aspect) the value will be same every day for a station. Other rasters (ex: solar radiation) change on a temporal basis, and will have a unique value for each station every day. The two type of rasters, constant, and temporally changing, will be treated differently in the value extract process.
+  The first step is to extract raster values to corresponding weather stations, in the weather station data frame.  For many rasters, (ex: elevation, proximity to coast, aspect) the value will be the same every day at one station. Other rasters (ex: solar radiation) change on a temporal basis, and will have a unique value every day at one station. The two type of rasters, constant, and temporally changing, will be treated differently in the value extraction process.
 
 ### Weather Stations Data Frame
   The data frame, `swns_stations_df`, stored within swnsmodelr, contains SWNS daily temperature data from 2012 - 2017. The data frame has columns for: station I.D. (`stationid`), date (`date_time`), minimum temperature (`temp_min`), maximum temperature (`temp_max`), and mean temperature (`temp_mean`). One row of data represents one daily record for one station. Use `str()`, to see the column names and variables types. 
@@ -47,7 +47,7 @@ rasters_names_list <- list("dem",  # elevation
                           "slope") # slope
 # Make into rasters objects list
 rasters_list <- lapply(FUN = raster,
-                       X   = paste0("E:\\Packages\\swnsmodelr\\Rasters\\200\\",rasters_names_list, ".tif"))
+                       X   = paste0("F:\\Rasters\\200\\",rasters_names_list, ".tif"))
 
 # Plot brick of rasters
 rasters_list %>% brick() %>% plot()
@@ -70,7 +70,7 @@ str(swns_stations_df_200)
   
 ```{r message=FALSE, warning=FALSE}
 solar_irradiance_rasters_df <- make_temporal_raster_df(
-  in_folder = "E:\\GOES_200m",
+  in_folder = "F:\\rasters\\GOES_200m_2",
   start_date = ymd('2012-01-01'),
   end_date   = ymd('2012-12-31'),
   date_chars = c(16,-5),
@@ -183,65 +183,6 @@ for(i in seq_along(rasters_list)){
 ```
 
 
-### Test Dependent Variable/Independent Variable Combinations at Different Timeframes
-
-In the `swns_stations_df_200` data frame there are three dependent variables: daily minimum, maxmimum, and mean temperatures, and seven independent variables extracted from rasters. Functions were written to model dependent and independent variables one-on-one, to see the individual relationships. A function was written for the daily, weekly, and monthly timeframes: `extract_daily_spvs()`, `extract_weekly_spvs`, `extract_monthly_spvs`. The term "spvs" refers to "smooth term p-values". 
-The functions a data frame that is similar to the input data frame, with three added columns: `ind_var` and `dep_var`, which specify which columns in the row were used as independent and dependent variables, respectively; and `pval`, which is the p-value from the smooth term in the GAM. 
-
-A sample of using the three functions, and plotting their results, are in the code examples below.
-
-```{r message=FALSE, warning=FALSE}
-swns_stations_df_200 <- add_date_columns(swns_stations_df_200)
-daily_spvs_df <- extract_daily_spvs(swns_stations_df_200, # data frame
-                                    c("temp_min","temp_max",
-                                      "temp_mean"),          # dependent variables
-                                    c("dem","asp","slope","tpi","ptoc",
-                                      "sum_irradiance","east, north"), #independent variables
-                                    2012, # year
-                                    1:10) # days in the year (ex: 1:365)
-ggplot(data = daily_spvs_df, aes(x = yday, y = pval)) +
-  geom_smooth(aes(colour = ind_var)) +
-  facet_wrap(~dep_var, ncol = 1) +
-  labs(x = "Day of the Year - 2012", y = "P-Value",
-       title = "Daily Timeframe",
-       colour = "Independent \n Variable")
-```
-
-```{r message=FALSE, warning=FALSE}
-swns_stations_df_200 <- add_date_columns(swns_stations_df_200)
-daily_spvs_df <- extract_weekly_spvs(swns_stations_df_200, # data frame
-                                    c("temp_min","temp_max",
-                                      "temp_mean"),          # dependent variables
-                                    c("dem","asp","slope","tpi","ptoc",
-                                      "sum_irradiance","east, north"), #independent variables
-                                    2012, # year
-                                    1:10) # weeks in the year (ex: 1:52)
-ggplot(data = daily_spvs_df, aes(x = yday, y = pval)) +
-  geom_smooth(aes(colour = ind_var)) +
-  facet_wrap(~dep_var, ncol = 1) +
-  labs(x = "Day of the Year - 2012", y = "P-Value",
-       title = "Weekly Timeframe",
-       colour = "Independent \n Variable")
-```
-
-
-```{r, eval = FALSE, message=FALSE, warning=FALSE}
-swns_stations_df_200 <- add_date_columns(swns_stations_df_200)
-daily_spvs_df <- extract_monthly_spvs(swns_stations_df_200, # data frame
-                                    c("temp_min","temp_max",
-                                      "temp_mean"),          # dependent variables
-                                    c("dem","asp","tpi","ptoc",
-                                      "sum_irradiance","east, north"), #independent variables
-                                    2012, # year
-                                    1) # months in the year (ex: 1:365)
-ggplot(data = daily_spvs_df, aes(x = yday, y = pval)) +
-  geom_smooth(aes(colour = ind_var)) +
-  facet_wrap(~dep_var, ncol = 1) +
-  labs(x = "Day of the Year - 2012", y = "P-Value",
-       title = "Monthly Timeframe",
-       colour = "Independent \n Variable")
-```
-
 ## Generate and Validate Models 
 
 A set of functions in `swnsmodelr` generate GAMs based on a model station data, then apply the models to validation station data, and computes the error at each validation record. The output from the functions is the validation station data frame with columns for the error (`resid`), GCV score(`gcv`), and adjusted R square () added. There is a function written for the three timeframes, daily, weekly, and monthly, respectively: `validate_daily_GAMs()`, `validate_weekly_GAMs()`, `validate_monthly_GAMs()`.
@@ -253,12 +194,11 @@ daily_val_df <- validate_daily_GAMs(model_stations_df,
                                      val_stations_df,
                                      years = 2012,
                                      days = 1:3,
-                                    formula = "temp_mean ~ s(dem) + s(asp) + s(tpi) 
-                                    + s(ptoc, k= 3) + s(east,north) + s(sum_irradiance)",
-                                    alt_formula ="temp_mean ~ s(dem) + s(asp) + s(tpi) 
-                                    + s(ptoc, k = 3) + s(east,north)")
+                                    formula = "temp_mean ~ s(dem)",
+                                    alt_formula ="temp_mean ~ s(dem)")
 ```
-
+### Test Dependent Variable/Independent Variable Combinations at Different Timeframes 
+In the `swns_stations_df_200` data frame there are three dependent variables: daily minimum, maxmimum, and mean temperatures, and seven independent variables extracted from rasters. 
 
 Two ways of visualizing the errors are by histogram, and a scatterplot against the dependent variable.
 ```{r message=FALSE, warning=FALSE}
@@ -292,13 +232,10 @@ daily_model_predict_rasters(start_date = ymd('2012-01-01'),
                                end_date = ymd('2017-12-31'),
                                formula = "temp_mean ~
                                           s(east,north) +
-                                          s(dem) +
-                                          s(sum_irradiance) +
-                                          s(ptoc, k= 3)",
+                                          s(dem)",
                                alt_formula = "temp_mean ~
                                           s(east,north) +
-                                          s(dem) +
-                                          s(ptoc, k= 3)",
+                                          s(dem)",
                                temperatures_df = model_stations_df,
                                input_rasters = rasters_list,
                                temporal_rasters_df = solar_irradiance_rasters_df,
@@ -326,7 +263,7 @@ generate_gdd_output(temp_mean_df,
                     end_date = end_date,
                     output_time_slice = "monthly",
                     growing_season = TRUE,
-                    output_folder = "Z:\\Dana\\Weekly\\Monthly_GDD_200_7",
+                    output_folder = "F:\\temp",
                     plot_gdd_raster = TRUE)
 ```
 
