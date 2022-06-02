@@ -11,12 +11,17 @@ indent: true
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(error = TRUE)
+<<<<<<< Updated upstream
+=======
+#install.packages(c('backports','dplyr','raster','lubridate','reshape2','modelr','randamcoloR','rgdal'))
+>>>>>>> Stashed changes
 library(swnsmodelr)
 library(ggplot2)
 ```
 
 ## Introduction
 
+<<<<<<< Updated upstream
   The `swnsmodelr` package was designed for users to easily model SWNS weather station data with rasters, stations, input variable(s) and models of their choosing. The package contains functions and weather station data, and input rasters are contained within the package's R project. 
 This document follows a workflow of preparing data, generating models, and generating outputs. The objects generated at the various steps in the example are stored in swnsmodelr. 
 
@@ -24,6 +29,15 @@ This document follows a workflow of preparing data, generating models, and gener
 ## Exract Rasters Values to Weather Station Data
 
   The first step is to extract raster values to corresponding weather stations, in the weather station data frame.  For many rasters, (ex: elevation, proximity to coast, aspect) the value will be the same every day at one station. Other rasters (ex: solar radiation) change on a temporal basis, and will have a unique value every day at one station. The two type of rasters, constant, and temporally changing, will be treated differently in the value extraction process.
+=======
+  The `swnsmodelr` package was designed for users to easily model SWNS weather station data with rasters, stations, input variable(s) and models of their chosing. The package contains functions and weather station data, and input rasters are contained within the package's R project. 
+This document follows a workflow of preparing data, generating models, and generating outputs. The objects generated at the various steps in the example are stored in swnsmodelr. 
+
+
+## Exract Rasters to Weather Station Data
+
+  The first step is to extract raster values to corresponding weather station in the weather station data frame.  For many rasters, (ex: elevation, proximity to coast, aspect) the value will be same every day for a station. Other rasters (ex: solar radiation) change on a temporal basis, and will have a unique value for each station every day. The two type of rasters, constant, and temporally changing, will be treated differently in the value extract process.
+>>>>>>> Stashed changes
 
 ### Weather Stations Data Frame
   The data frame, `swns_stations_df`, stored within swnsmodelr, contains SWNS daily temperature data from 2012 - 2017. The data frame has columns for: station I.D. (`stationid`), date (`date_time`), minimum temperature (`temp_min`), maximum temperature (`temp_max`), and mean temperature (`temp_mean`). One row of data represents one daily record for one station. Use `str()`, to see the column names and variables types. 
@@ -35,30 +49,34 @@ str(swns_stations_df)
 
 ### Constant Rasters
 
-  The constant rasters should be stored as a list of raster objects. The code below is an example of how to create a list of raster objects from rasters available in the package project. The rasters are from the `200` subdirectory within the `Rasters` folder. In this subdirectory, rasters have a spatial resolution of 200m.  
+  The constant rasters should be stored as a list of raster objects. The code below is an example of how to create a list of raster objects from rasters available in the package project. The rasters are from the `20m` subdirectory within the `Rasters` folder. In this subdirectory, rasters have a spatial resolution of 20m.  
 ```{r message=FALSE, warning=FALSE, fig.height = 5, fig.width= 7}
 # Names of rasters in Rasters directory (everything before extension)
-rasters_names_list <- list("dem",  # elevation
-                          "ptoc", # proxmity to coast
-                          "east", # easting
-                          "north",# northing
-                          "asp",  # aspect
-                           "tpi", # topographic position index
-                          "slope") # slope
+rasters_names_list <- list("dem20m",  # elevation
+                          "ptoc20m", # proximity to coast
+                          "east20m", # easting
+                          "north20m",# northing
+                          "asp20m",  # aspect
+                           "tpi300m20m", # topographic position index
+                          "slp20m") # slope
 # Make into rasters objects list
 rasters_list <- lapply(FUN = raster,
+<<<<<<< Updated upstream
                        X   = paste0("F:\\Rasters\\200\\",rasters_names_list, ".tif"))
+=======
+                       X   = paste0("d:\\data\\rasters\\20m\\",rasters_names_list, ".tif"))
+>>>>>>> Stashed changes
 
 # Plot brick of rasters
-rasters_list %>% brick() %>% plot()
+#rasters_list %>% brick() %>% plot()
 
 
 ```
 
   The constant raster values are added to the `swns_stations_df` table with  `extract_constant_rasters_values()`.  A new frame will be made called `swns_stations_df_200`, which is the original table plus constant raster values at 200m resolution
 ```{r message=FALSE, warning=FALSE}
-swns_stations_df_200 <- extract_constant_raster_values(swns_stations_df, rasters_list)
-str(swns_stations_df_200)
+swns_stations_df_20 <- extract_constant_raster_values(swns_stations_df, rasters_list)
+str(swns_stations_df_20)
 ```
 
 
@@ -120,23 +138,12 @@ The following code was used to separate the stations, and can be easily altered 
 # Choose modelling stations
 model_stations_df <- swns_stations_df_200 %>%
           # 1. Include all study stations
-  filter(stationid %in% study_stations_list |
-          # 2. Included these ext stations
-          stationid %in% c("6354","47187","6456","DNR025","6497")) %>% 
-          # 3. Remove these study stations
-  filter((stationid %in% c("YA4","S160","AN3","CL4","KE5","WE5","WE2","LI2","CH4")) == FALSE)
+  filter(stationid %in% study_stations_list )
 
 # Choose validation stations
 val_stations_df   <- swns_stations_df_200 %>% 
           # 1. Include all ext stations
-  filter(stationid %in% ext_stations_list  |    
-          # 2. Add these study stations
-           stationid %in% c("YA4","S160","AN3","CL4","KE5","WE5","WE2","LI2","CH4")) %>%
-          # 3. Remove these ext stations
-  filter(!(stationid %in% c("6354", "47187", "6456","27141", "DLG006", "DNR024",
-                            "6501", "DNR025", "DNR003", "6497")             
-           )
-         ) 
+  filter(stationid %in% ext_stations_list  ) 
 ```
 
 This is the resulting modelling and validation stations:
@@ -155,6 +162,11 @@ ggplot(data = swns_stations_df %>%
 ## Examine Raster Variable Relationship with Weather Station Temperature
 
 
+### Histograms of input rasters
+``` {r}
+lapply(rasters_list, hist)
+
+```
 ### Weather Station Coverage of Raster Variability
 ```{r, message=FALSE, warning=FALSE, fig.height = 5, fig.width= 7}
 model_stations_sp <- model_stations_df %>% 
@@ -165,7 +177,7 @@ coordinates(model_stations_sp) = ~ EASTING + NORTHING
 par(mfrow = c(2,2))
 for(i in seq_along(rasters_list)){
   raster_values <- raster::extract(rasters_list[[i]], model_stations_sp) 
-  if(names(rasters_list[[i]]) == "slope"){
+  if(names(rasters_list[[i]]) == "slp20"){
     plot(x = 1:(length(raster_values)),
        y = raster_values[sort.list(raster_values)], 
        ylab = names(rasters_list[[i]]),
