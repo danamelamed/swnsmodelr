@@ -11,33 +11,24 @@ indent: true
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(error = TRUE)
-<<<<<<< Updated upstream
-=======
-#install.packages(c('backports','dplyr','raster','lubridate','reshape2','modelr','randamcoloR','rgdal'))
->>>>>>> Stashed changes
 library(swnsmodelr)
 library(ggplot2)
 ```
 
 ## Introduction
 
-<<<<<<< Updated upstream
-  The `swnsmodelr` package was designed for users to easily model SWNS weather station data with rasters, stations, input variable(s) and models of their choosing. The package contains functions and weather station data, and input rasters are contained within the package's R project. 
-This document follows a workflow of preparing data, generating models, and generating outputs. The objects generated at the various steps in the example are stored in swnsmodelr. 
 
 
 ## Exract Rasters Values to Weather Station Data
 
   The first step is to extract raster values to corresponding weather stations, in the weather station data frame.  For many rasters, (ex: elevation, proximity to coast, aspect) the value will be the same every day at one station. Other rasters (ex: solar radiation) change on a temporal basis, and will have a unique value every day at one station. The two type of rasters, constant, and temporally changing, will be treated differently in the value extraction process.
-=======
+
   The `swnsmodelr` package was designed for users to easily model SWNS weather station data with rasters, stations, input variable(s) and models of their chosing. The package contains functions and weather station data, and input rasters are contained within the package's R project. 
 This document follows a workflow of preparing data, generating models, and generating outputs. The objects generated at the various steps in the example are stored in swnsmodelr. 
 
 
-## Exract Rasters to Weather Station Data
 
-  The first step is to extract raster values to corresponding weather station in the weather station data frame.  For many rasters, (ex: elevation, proximity to coast, aspect) the value will be same every day for a station. Other rasters (ex: solar radiation) change on a temporal basis, and will have a unique value for each station every day. The two type of rasters, constant, and temporally changing, will be treated differently in the value extract process.
->>>>>>> Stashed changes
+
 
 ### Weather Stations Data Frame
   The data frame, `swns_stations_df`, stored within swnsmodelr, contains SWNS daily temperature data from 2012 - 2017. The data frame has columns for: station I.D. (`stationid`), date (`date_time`), minimum temperature (`temp_min`), maximum temperature (`temp_max`), and mean temperature (`temp_mean`). One row of data represents one daily record for one station. Use `str()`, to see the column names and variables types. 
@@ -60,12 +51,7 @@ rasters_names_list <- list("dem20m",  # elevation
                            "tpi300m20m", # topographic position index
                           "slp20m") # slope
 # Make into rasters objects list
-rasters_list <- lapply(FUN = raster,
-<<<<<<< Updated upstream
-                       X   = paste0("F:\\Rasters\\200\\",rasters_names_list, ".tif"))
-=======
-                       X   = paste0("d:\\data\\rasters\\20m\\",rasters_names_list, ".tif"))
->>>>>>> Stashed changes
+rasters_list <- lapply(FUN = raster, X   = paste0("d:\\data\\rasters\\20m\\",rasters_names_list, ".tif"))
 
 # Plot brick of rasters
 #rasters_list %>% brick() %>% plot()
@@ -130,7 +116,7 @@ ggplot(data = swns_stations_df %>%
 ```
   
 
-The study stations alone do not provide sufficient coverage in the eastern most portion surrounding the Halifax area, and the Annapolis valley. There are external stations in those areas which were included in the model stations along with the study stations. The external stations that were included as model stations were '6354' in Greenwood, '6456' north is St. Margaret's Bay, '47187' in Halifax, 'DN025' south of Digby and '6497' near Berwick. A  number of study stations were used in validating the models rather than generating them, these stations were: "YA4","S160","AN3","CL4","KE5","WE5","WE2","LI2","CH4". These stations are located in areas represented by model stations but not so close that their modelling values were essentially the same.
+
 
 
 The following code was used to separate the stations, and can be easily altered to exclude or include stations in either category:
