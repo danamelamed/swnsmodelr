@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = 'F:\\Packages\\swnsmodelr')
+#install.packages('randomcoloR')
 library(swnsmodelr)
 ```
 
@@ -24,33 +25,50 @@ Throughout the modelling workflow provided in the swnsmodelr package, the consta
 
 
 # Store names of rasters from list
-rasters_names_list <- c("dem.tif","tpi.tif","asp.tif","east.tif","north.tif","ptoc.tif")
+rasters_dir <- file.path('D:','data','rasters','input_rasters')
+rasters_names_list <- c("dem","tpi300m",'tpi2000m',"asp","east","north","ptoc","slp")
+resolutions <- c('20m','100m','200m','700m','1000m')
 
-# Convert to raster objects
-rasters_list <- lapply(FUN = raster,
-                       X   = paste0("Rasters\\",rasters_names_list))
+all_rasters <-  file.path(rasters_dir,paste0(as.list(outer(rasters_names_list,resolutions,paste0)),'.tif'))
+
+rasters_list <- list()
+c <- 1
+for(raster in all_rasters){
+  try({rasters_list[[c]] <- raster(raster)
+       c <- c+1
+       }) 
+}
+
 ```
 
 
-To see the properties of the rasters in the list, simply call it by name:
+
 ```{r}
-rasters_list
-```
+stations_df <- extract_constant_raster_values(swns_stations_df, rasters_list)
+
+```  
 
 
-A constant raster can be easily added to the list from a different location as in the commented-out example below:
+
+#### Bring Temporal Rasters into R Environment
+This stage requires two steps. In the first step, using `swnsmodelr::make_temporal_rasters_df()` the paths for all the temporal rasters are stored in a dataframe, with their corresponding date. This data frame is called the temporal rasters dataframe. In the second step, the temporal rasters dataframe is used to point to rasters, and extract their values to the `stations_df`. Here, the temporal rasters dataframe is called `solar_irradiance_rasters_df`.
+
 ```{r}
-# # Add a constant raster from a different location to the rasters_list
-# rasters_list[[length(rasters_list) + 1]] <- raster("path\\to\\raster.extension")
-
+resolutions = c('20m','100m','200m','700m','1000m')
+for(res in resolutions){
+  print(res)
+solar_irradiance_rasters_df <- make_temporal_raster_df(
+  in_folder = paste0("D:\\GOES\\",res),
+  start_date = ymd('2012-01-01'),
+  end_date   = ymd('2017-12-31'),
+  date_chars = c(16,-5),
+  date_format = "%Y_%j",
+  extension = ".tif")
+stations_df <- extract_temporal_raster_values(solar_irradiance_rasters_df,
+                                              stations_df,
+                                              paste0('solar',res))
+}
 ```
-
-The rasters provided in the package project have a resolution of 20m, and are in the projection UTM zone 20N. The "names" slot is the phenomenom represented by the raster. Creating a "brick" of the raster is an easy way to plot them all at once:
-```{r}
-constant_rasters <- brick(rasters_list)
-plot(constant_rasters)
-```
-
 
 #### Investigate Potential Usefulness of Constant Rasters
 
