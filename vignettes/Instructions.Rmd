@@ -47,7 +47,7 @@ rasters_names_list <- list("dem20m",  # elevation
                           "ptoc20m", # proximity to coast
                           "east20m", # easting
                           "north20m",# northing
-                          "asp20m",  # aspect
+                          "aspg20m",  # aspect
                            "tpi300m20m", # topographic position index
                           "slp20m") # slope
 # Make into rasters objects list
