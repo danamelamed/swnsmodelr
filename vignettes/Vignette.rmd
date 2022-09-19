@@ -7,26 +7,58 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = 'F:\\Packages\\swnsmodelr')
+knitr::opts_chunk$set(eval = FALSE)
+knitr::opts_knit$set(root.dir = 'D:\\swnsmodelr')
 #install.packages('randomcoloR')
 library(swnsmodelr)
 ```
 
 ## Selecting Rasters as Inputs
 
-### Constant Rasters
 Rasters of physical properties of the environment that are constant through time are referred to as "constant rasters" in the package. Examples of these rasters, that are provided as extra data, are the elevation, aspect, slope, proximity to coast line, easting and northing values of the region. Since the values from these rasters do not change over time, they only need to be extracted to the weather station points once. In this section is an overview of how to select and manipulate these rasters.
 
-#### Bring Constant Rasters into R Environment
+### Transform Aspect Values
+
+Create the aspect rasters as per Guan et al, 2013
+
+```{r, eval = FALSE}
+# as per Guan et al 2013
+rasters_dir <- file.path('D:','data','rasters','input_rasters')
+resolutions = list(20,100,200,700,1000)
+for(resolution in resolutions){
+for(raster in rasters_list){
+if(yres(raster)== resolution){
+  if(substring(names(raster),1,3)== 'asp'){
+  
+    asp <- raster
+   
+  }
+  if(substring(names(raster),1,3)== 'slp'){
+    slp <- raster
+  }
+}
+}
+aspg <- slp*cos(asp)
+writeRaster(aspg, file.path(rasters_dir,paste0('aspg',resolution,'m.tif')),
+            overwrite = TRUE)
+}
+
+```
+
+
+
+
+
+### Bring Constant Rasters into R Environment
 
 Throughout the modelling workflow provided in the swnsmodelr package, the constant rasters should be in the form of raster objects in a list. Rasters have been provided in the swnsmodelr project. Selecting rasters from the project folder and storing them as a list of raster objects can be done with the following code:
-```{r}
+```{r, results = "hide", error = FALSE}
 # See list of rasters in Rasters project folder
 
 
 # Store names of rasters from list
 rasters_dir <- file.path('D:','data','rasters','input_rasters')
-rasters_names_list <- c("dem","tpi300m",'tpi2000m',"asp","east","north","ptoc","slp")
+rasters_names_list <- c("dem","tpi300m",'tpi2000m',"aspg","east","north","ptoc","slp")
 resolutions <- c('20m','100m','200m','700m','1000m')
 
 all_rasters <-  file.path(rasters_dir,paste0(as.list(outer(rasters_names_list,resolutions,paste0)),'.tif'))
@@ -41,19 +73,20 @@ for(raster in all_rasters){
 
 ```
 
+Extract values of constant rasters at stations to a dataframe.
 
 
 ```{r}
-stations_df <- extract_constant_raster_values(swns_stations_df, rasters_list)
+stations_df <- extract_constant_raster_values(swns_stations_df,
+                                              rasters_list)
 
 ```  
 
 
-
-#### Bring Temporal Rasters into R Environment
+### Bring Temporal Rasters into R Environment
 This stage requires two steps. In the first step, using `swnsmodelr::make_temporal_rasters_df()` the paths for all the temporal rasters are stored in a dataframe, with their corresponding date. This data frame is called the temporal rasters dataframe. In the second step, the temporal rasters dataframe is used to point to rasters, and extract their values to the `stations_df`. Here, the temporal rasters dataframe is called `solar_irradiance_rasters_df`.
 
-```{r}
+```{r, message = FALSE}
 resolutions = c('20m','100m','200m','700m','1000m')
 for(res in resolutions){
   print(res)
@@ -70,7 +103,108 @@ stations_df <- extract_temporal_raster_values(solar_irradiance_rasters_df,
 }
 ```
 
-#### Investigate Potential Usefulness of Constant Rasters
 
-The first thing to investigatea about the usefulness of a constant raster, is the variation among weather stations. Obviously, if only small amount of the raster values are represented at stations, the model will extrapolating to model temperature over the region, rather that interpolating. 
 
+
+
+#### Exploratory Data Analysis
+
+##### Raster values 
+
+Check out raster statistics as a table
+```{r}
+rasters_names_list <- c("dem","tpi300m",'tpi2000m',"aspg","east","north","ptoc","slp")
+df <- data.frame(names = character(),min=double(),mean=double(),max=double())
+c <- 0
+for(raster_name in rasters_names_list){
+  names_list <- list()
+
+  for(raster in rasters_list){
+    print(substring(names(raster),1,3))
+    if(substring(names(raster),1,3) == substring(raster_name,1,3)){
+      
+      if(substring(names(raster),1,3) == 'tpi'){
+        if(substring(names(raster),1,4) == substring(raster_name,1,4)){
+          
+          name <- names(raster)
+          max<-cellStats(raster,'max')
+          min<-cellStats(raster,'min')
+          mean<-cellStats(raster,'mean')
+          df[nrow(df) + 1,] <- c(name,min,mean,max)
+           c <- c +1
+        }
+      }else{
+        name <- names(raster)
+          max<-cellStats(raster,'max')
+          min<-cellStats(raster,'min')
+          mean<-cellStats(raster,'mean')
+          df[nrow(df) + 1,] <- c(name,min,mean,max)
+           c <- c +1
+          
+      }
+    }
+    
+   
+  }
+  
+  
+}
+```
+
+
+
+
+Check out histograms of the raster values. Compare between different resolutions.
+
+```{r}
+
+
+
+
+for(raster in rasters_list){
+
+    test_raster <- raster
+    raster_name <- test_raster %>% names
+    
+    hist_info <- hist(test_raster, maxpixells = ncell(test_raster))
+    test_hist <- hist_info
+    
+    test_hist$counts <- hist_info$counts %>% divide_by(sum(hist_info$counts)) %>% multiply_by(100)
+    print(plot(test_hist, ylim= c(0,20), breaks = 15, xlab = raster_name, main = raster_name))
+
+      
+
+} 
+
+
+
+```
+
+##### Raster values  at weather stations
+Ideally, weather stations would cover the full range of raster values. Also, compare between resolutions.
+```{r}
+for(raster in rasters_list){
+  df <- extract(raster, swns_stations_sp) %>% sort
+  plot(x=seq(1:length(df)),df,
+             ylim = c(cellStats(raster,min),cellStats(raster,max)),
+       xlab = "Stations",
+       ylab= names(raster))
+}
+
+```
+
+
+
+##### Temperature values over the year
+Check out the temperatures recorded at each station over the year, for each year.
+```{r}
+
+for(station_now in stations_df$stationid %>% unique()){
+print(ggplot(data = stations_df %>% filter(stationid == station_now), aes(x = yday, y = temp_mean)) +
+        geom_smooth(aes(colour = year_factor)) +
+        labs(title=station_now)
+      )
+
+}
+
+```
