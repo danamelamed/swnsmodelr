@@ -1,0 +1,35 @@
+---
+title: "Weather Station Graphs"
+author: "Dana Melamed"
+date: "9/10/2022"
+output: word_document
+---
+
+
+
+```{r, messages = FALSE, warnings = FALSE, echo = FALSE, error = FALSE, eval = TRUE}
+library(swnsmodelr)
+library(ggplot2)
+par(mfrow = c(3,2))
+df <- swns_stations_df %>% add_date_columns()
+df$year <- df$year %>%  as.factor()
+for(station_now in df$stationid %>% unique()){
+print(suppressWarnings(ggplot(data = df %>% filter(stationid == station_now), aes(x = yday, y = temp_mean)) +
+        geom_smooth(aes(colour = year), se = FALSE) +
+        labs(title = paste0('Station: ', station_now),
+             x = 'Day of the Year',
+             y = 'Temperature') +
+  scale_color_manual(values = c('2012' = 'salmon',
+                                '2013'='gold3',
+                                "2014"='seagreen3',
+                                '2015'='cyan3',
+                                '2016'='cornflowerblue',
+                                '2017'='maroon2'))+
+    theme(legend.position="none") +
+    coord_cartesian(ylim = c(-25, 30),xlim = c(0, 365)) 
+   
+      )
+  )
+
+}
+```
