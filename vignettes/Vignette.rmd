@@ -58,7 +58,7 @@ Throughout the modelling workflow provided in the swnsmodelr package, the consta
 
 # Store names of rasters from list
 rasters_dir <- file.path('D:','data','rasters','input_rasters')
-rasters_names_list <- c("dem","tpi300m",'tpi2000m',"aspg","east","north","ptoc","slp")
+rasters_names_list <- c("dem","tpi300m",'tpi2000m',"aspg","east","north","cp","slp")
 resolutions <- c('20m','100m','200m','700m','1000m')
 
 all_rasters <-  file.path(rasters_dir,paste0(as.list(outer(rasters_names_list,resolutions,paste0)),'.tif'))
@@ -79,6 +79,22 @@ Extract values of constant rasters at stations to a dataframe.
 ```{r}
 stations_df <- extract_constant_raster_values(swns_stations_df,
                                               rasters_list)
+stations_melt_df <- reshape2::melt(stations_df, id.vars = c('stationid','date_time','temp_min','temp_max','temp_mean','EASTING','NORTHING'))
+
+stations_vars_df <-  stations_melt_df %>% 
+  mutate(var = ifelse(grepl('dem',variable),'dem','')) %>%
+  mutate(var = ifelse(grepl('tpi300m',variable),'tpi300m',var)) %>%
+  mutate(var = ifelse(grepl('tpi2000m',variable),'tpi2000m',var)) %>%
+  mutate(var = ifelse(grepl('aspg',variable),'aspg',var)) %>%
+  mutate(var = ifelse(grepl('east',variable),'east',var)) %>%
+  mutate(var = ifelse(grepl('north',variable),'north',var)) %>%
+  mutate(var = ifelse(grepl('slp',variable),'slp',var)) %>%
+  mutate(var = ifelse(grepl('cp',variable),'cp',var)) %>%
+  mutate(res = ifelse(grepl('20',variable),'20','')) %>%
+   mutate(res = ifelse(grepl('100',variable),'100',res)) %>%
+   mutate(res = ifelse(grepl('200',variable),'200',res)) %>%
+   mutate(res = ifelse(grepl('700',variable),'700',res)) %>%
+  mutate(res = ifelse(grepl('1000',variable),'1000',res)) 
 
 ```  
 
@@ -155,30 +171,115 @@ for(raster_name in rasters_names_list){
 
 
 Check out histograms of the raster values. Compare between different resolutions.
+```{r, echo = FALSE}
 
-```{r}
+# get all rasters as list of lists
+variables <- list('dem','slp','aspg','cp','tpi300m','tpi2000m','north','east')
+
+raster_lists <- list()
+for(j in 1:length(variables)){
+  
+  if(variables[j]=='tpi300m'){
+    resolutions <- list('20','100','200')
+  }else{
+    resolutions <- list('20','100','200','700','1000')
+  }
+  inner_list <- list()
+  for(i in 1:length(resolutions)){
+   
+    inner_list[[i]] <-raster(paste0('d:\\data\\rasters\\input_rasters\\',variables[j],resolutions[i],'m.tif'))
+  }
+  raster_lists[[j]] <- inner_list
+}
 
 
 
-
-for(raster in rasters_list){
-
-    test_raster <- raster
-    raster_name <- test_raster %>% names
+# create histograms for every raster... keep the bins the same as the 20m resolution raster
+q <- list()
+for(j in 1:length(raster_lists)){
+  p <- list()
+  
+  
+  for(i in 1:length(raster_lists[[j]])){
+    if(i == 1){
+      # get breaks
+      h <- hist(getValues(raster_lists[[j]][[i]]), plot = FALSE, main = variables[[j]], nclass = 28)
+      }
     
-    hist_info <- hist(test_raster, maxpixells = ncell(test_raster))
-    test_hist <- hist_info
+  
+   tryCatch(
+    expr = {m <- graphics::hist(getValues(raster_lists[[j]][[i]]), breaks = h$breaks
+            , main = paste0(variables[[j]],resolutions[[i]]),xlab = 'Raster Cell Value')},
+    error = function(e){ 
+     # print(raster_lists[[j]][[i]]%>%names)
+         m <- graphics::hist(getValues(raster_lists[[j]][[i]])
+                  , main = paste0(variables[[j]],resolutions[[i]])
+                  , xlab = 'Raster Cell Value'
+                  , nclass = 28)}
+            )
     
-    test_hist$counts <- hist_info$counts %>% divide_by(sum(hist_info$counts)) %>% multiply_by(100)
-    print(plot(test_hist, ylim= c(0,20), breaks = 15, xlab = raster_name, main = raster_name))
-
-      
-
-} 
-
+  print(raster_lists[[j]][[i]]%>%names) 
+  p[[i]] <- m
+  }
+  
+ q[[j]] <- p   
+}
 
 
 ```
+
+Take a look at numbers from histograms
+
+```{r}
+# for each variable
+df_list <- list()
+c = 1
+for(p in q){
+  df <- data.frame(mids20m = p[[1]]$mids)
+
+  try(df$var20m <- p[[1]]$counts/sum(p[[1]]$counts)*100)
+  try(df$var100m <- p[[2]]$counts/sum(p[[2]]$counts)*100)
+  try(df$var200m <- p[[3]]$counts/sum(p[[3]]$counts)*100)
+  try(df$var700m <- p[[4]]$counts/sum(p[[4]]$counts)*100)
+  try(df$var1000m <- p[[5]]$counts/sum(p[[5]]$counts)*100)
+  df_list[[c]] <- df
+  c <- c+ 1
+  
+}
+
+for(df in df_list){
+  print(kable(df, digits = 2))
+}
+
+
+```
+
+Create histograms
+```{r}
+#for each df in the list
+i <- 1
+for(df in df_list){
+      var = variables[i]
+      print(ggplot(data = df, aes(x = mids20m, y = var20m))+
+       geom_bar(stat='identity')+
+        labs(y = 'Percentage', x = paste0(var,'20m')))
+      print(ggplot(data = df, aes(x = mids20m, y = var100m))+
+        geom_bar(stat='identity')+
+        labs(y = 'Percentage', x = paste0(var,'100m')))
+      print(ggplot(data = df, aes(x = mids20m, y = var200m))+
+        geom_bar(stat='identity')+
+        labs(y = 'Percentage', x = paste0(var,'200m')))
+      try(print(ggplot(data = df, aes(x = mids20m, y = var700m))+
+        geom_bar(stat='identity')+
+        labs(y = 'Percentage', x = paste0(var,'700m'))))
+      try(print(ggplot(data = df, aes(x = mids20m, y = var1000m))+
+        geom_bar(stat='identity')+
+        labs(y = 'Percentage', x = paste0(var,'1000m'))))
+     i <- i+1
+  
+  }
+
+
 
 ##### Raster values  at weather stations
 Ideally, weather stations would cover the full range of raster values. Also, compare between resolutions.
@@ -190,8 +291,8 @@ for(raster in rasters_list){
        xlab = "Stations",
        ylab= names(raster))
 }
-
 ```
+
 
 
 
