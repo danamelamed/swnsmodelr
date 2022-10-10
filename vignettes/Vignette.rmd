@@ -81,6 +81,32 @@ stations_df <- extract_constant_raster_values(swns_stations_df,
                                               rasters_list)
 stations_melt_df <- reshape2::melt(stations_df, id.vars = c('stationid','date_time','temp_min','temp_max','temp_mean','EASTING','NORTHING'))
 
+
+```  
+
+
+### Bring Temporal Rasters into R Environment
+This stage requires two steps. In the first step, using `swnsmodelr::make_temporal_rasters_df()` the paths for all the temporal rasters are stored in a dataframe, with their corresponding date. This data frame is called the temporal rasters dataframe. In the second step, the temporal rasters dataframe is used to point to rasters, and extract their values to the `stations_df`. Here, the temporal rasters dataframe is called `solar_irradiance_rasters_df`.
+
+```{r, message = FALSE}
+resolutions = c('20m','100m','200m','700m','1000m')
+for(res in resolutions){
+  
+solar_irradiance_rasters_df <- make_temporal_raster_df(
+  in_folder = paste0("D:\\GOES\\",res),
+  start_date = ymd('2012-01-01'),
+  end_date   = ymd('2017-12-31'),
+  date_chars = c(16,-5),
+  date_format = "%Y_%j",
+  extension = ".tif")
+stations_df <- extract_temporal_raster_values(solar_irradiance_rasters_df,
+                                              stations_df,
+                                              paste0('solar',res))
+}
+```
+
+melt
+```{r}
 stations_vars_df <-  stations_melt_df %>% 
   mutate(var = ifelse(grepl('dem',variable),'dem','')) %>%
   mutate(var = ifelse(grepl('tpi300m',variable),'tpi300m',var)) %>%
@@ -96,30 +122,7 @@ stations_vars_df <-  stations_melt_df %>%
    mutate(res = ifelse(grepl('700',variable),'700',res)) %>%
   mutate(res = ifelse(grepl('1000',variable),'1000',res)) 
 
-```  
-
-
-### Bring Temporal Rasters into R Environment
-This stage requires two steps. In the first step, using `swnsmodelr::make_temporal_rasters_df()` the paths for all the temporal rasters are stored in a dataframe, with their corresponding date. This data frame is called the temporal rasters dataframe. In the second step, the temporal rasters dataframe is used to point to rasters, and extract their values to the `stations_df`. Here, the temporal rasters dataframe is called `solar_irradiance_rasters_df`.
-
-```{r, message = FALSE}
-resolutions = c('20m','100m','200m','700m','1000m')
-for(res in resolutions){
-  print(res)
-solar_irradiance_rasters_df <- make_temporal_raster_df(
-  in_folder = paste0("D:\\GOES\\",res),
-  start_date = ymd('2012-01-01'),
-  end_date   = ymd('2017-12-31'),
-  date_chars = c(16,-5),
-  date_format = "%Y_%j",
-  extension = ".tif")
-stations_df <- extract_temporal_raster_values(solar_irradiance_rasters_df,
-                                              stations_df,
-                                              paste0('solar',res))
-}
 ```
-
-
 
 
 
@@ -129,14 +132,14 @@ stations_df <- extract_temporal_raster_values(solar_irradiance_rasters_df,
 
 Check out raster statistics as a table
 ```{r}
-rasters_names_list <- c("dem","tpi300m",'tpi2000m',"aspg","east","north","ptoc","slp")
+rasters_names_list <- c("dem","slp","aspg","cp","tpi300m","tpi2000m","north","east")
 df <- data.frame(names = character(),min=double(),mean=double(),max=double())
 c <- 0
 for(raster_name in rasters_names_list){
   names_list <- list()
 
   for(raster in rasters_list){
-    print(substring(names(raster),1,3))
+   
     if(substring(names(raster),1,3) == substring(raster_name,1,3)){
       
       if(substring(names(raster),1,3) == 'tpi'){
@@ -158,6 +161,18 @@ for(raster_name in rasters_names_list){
            c <- c +1
           
       }
+      
+    }
+    
+    if(substring(names(raster),1,2) == 'cp'){
+      if(substring(names(raster),1,2) == substring(raster_name,1,2)){
+       name <- names(raster)
+          max<-cellStats(raster,'max')
+          min<-cellStats(raster,'min')
+          mean<-cellStats(raster,'mean')
+          df[nrow(df) + 1,] <- c(name,min,mean,max)
+           c <- c +1 
+      }
     }
     
    
@@ -165,6 +180,8 @@ for(raster_name in rasters_names_list){
   
   
 }
+
+#write.csv(df, 'd:\\data\\raster_stats.csv')
 ```
 
 
