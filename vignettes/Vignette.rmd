@@ -8,7 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(eval = FALSE)
-knitr::opts_knit$set(root.dir = 'D:\\swnsmodelr')
+knitr::opts_knit$set(root.dir = 'F:\\swnsmodelr')
 #install.packages('randomcoloR')
 library(swnsmodelr)
 ```
@@ -21,9 +21,9 @@ Rasters of physical properties of the environment that are constant through time
 
 Create the aspect rasters as per Guan et al, 2013
 
-```{r, eval = FALSE}
+```{r transform aspect, eval = FALSE}
 # as per Guan et al 2013
-rasters_dir <- file.path('D:','data','rasters','input_rasters')
+rasters_dir <- file.path('F:','data','rasters','input_rasters')
 resolutions = list(20,100,200,700,1000)
 for(resolution in resolutions){
 for(raster in rasters_list){
@@ -39,8 +39,8 @@ if(yres(raster)== resolution){
 }
 }
 aspg <- slp*cos(asp)
-writeRaster(aspg, file.path(rasters_dir,paste0('aspg',resolution,'m.tif')),
-            overwrite = TRUE)
+#writeRaster(aspg, file.path(rasters_dir,paste0('aspg',resolution,'m.tif')),
+#            overwrite = TRUE)
 }
 
 ```
@@ -52,13 +52,14 @@ writeRaster(aspg, file.path(rasters_dir,paste0('aspg',resolution,'m.tif')),
 ### Bring Constant Rasters into R Environment
 
 Throughout the modelling workflow provided in the swnsmodelr package, the constant rasters should be in the form of raster objects in a list. Rasters have been provided in the swnsmodelr project. Selecting rasters from the project folder and storing them as a list of raster objects can be done with the following code:
-```{r, results = "hide", error = FALSE}
+```{r create rasters_list, results = "hide", error = FALSE}
 # See list of rasters in Rasters project folder
 
 
 # Store names of rasters from list
-rasters_dir <- file.path('D:','data','rasters','input_rasters')
-rasters_names_list <- c("dem","tpi300m",'tpi2000m',"aspg","east","north","cp","slp")
+rasters_dir <- file.path('F:','data','rasters','input_rasters')
+rasters_names_list <- c("dem","tpi300m",'tpi2000m','tpi5000m',
+                        "aspg","east","north","cp","slp")
 resolutions <- c('20m','100m','200m','700m','1000m')
 
 all_rasters <-  file.path(rasters_dir,paste0(as.list(outer(rasters_names_list,resolutions,paste0)),'.tif'))
@@ -76,10 +77,9 @@ for(raster in all_rasters){
 Extract values of constant rasters at stations to a dataframe.
 
 
-```{r}
-stations_df <- extract_constant_raster_values(swns_stations_df,
+```{r extract constant rasters}
+swns_stations_df <- extract_constant_raster_values(swns_stations_df,
                                               rasters_list)
-stations_melt_df <- reshape2::melt(stations_df, id.vars = c('stationid','date_time','temp_min','temp_max','temp_mean','EASTING','NORTHING'))
 
 
 ```  
@@ -88,34 +88,41 @@ stations_melt_df <- reshape2::melt(stations_df, id.vars = c('stationid','date_ti
 ### Bring Temporal Rasters into R Environment
 This stage requires two steps. In the first step, using `swnsmodelr::make_temporal_rasters_df()` the paths for all the temporal rasters are stored in a dataframe, with their corresponding date. This data frame is called the temporal rasters dataframe. In the second step, the temporal rasters dataframe is used to point to rasters, and extract their values to the `stations_df`. Here, the temporal rasters dataframe is called `solar_irradiance_rasters_df`.
 
-```{r, message = FALSE}
+```{r temporal rasters, message = FALSE}
 resolutions = c('20m','100m','200m','700m','1000m')
 for(res in resolutions){
   
 solar_irradiance_rasters_df <- make_temporal_raster_df(
-  in_folder = paste0("D:\\GOES\\",res),
+  in_folder = paste0("F:\\GOES\\",res),
   start_date = ymd('2012-01-01'),
   end_date   = ymd('2017-12-31'),
   date_chars = c(16,-5),
   date_format = "%Y_%j",
   extension = ".tif")
-stations_df <- extract_temporal_raster_values(solar_irradiance_rasters_df,
-                                              stations_df,
-                                              paste0('solar',res))
+df <- extract_temporal_raster_values(solar_irradiance_rasters_df,
+                                    swns_stations_df,
+                                    paste0('solar',res))
+col_name = paste0('solar',res)
+swns_stations_df <- swns_stations_df %>% mutate( df[length(df)])
+
 }
+
 ```
 
 melt
-```{r}
-stations_vars_df <-  stations_melt_df %>% 
+```{r melt dataframe}
+swns_stations_melt_df <- reshape2::melt(swns_stations_solar_df, id.vars = c('stationid','date_time','temp_min','temp_max','temp_mean','EASTING','NORTHING'))
+swns_stations_vars_df <-  stations_melt_df %>% 
   mutate(var = ifelse(grepl('dem',variable),'dem','')) %>%
   mutate(var = ifelse(grepl('tpi300m',variable),'tpi300m',var)) %>%
   mutate(var = ifelse(grepl('tpi2000m',variable),'tpi2000m',var)) %>%
+  mutate(var = ifelse(grepl('tpi5000m',variable),'tpi5000m',var)) %>%
   mutate(var = ifelse(grepl('aspg',variable),'aspg',var)) %>%
   mutate(var = ifelse(grepl('east',variable),'east',var)) %>%
   mutate(var = ifelse(grepl('north',variable),'north',var)) %>%
   mutate(var = ifelse(grepl('slp',variable),'slp',var)) %>%
   mutate(var = ifelse(grepl('cp',variable),'cp',var)) %>%
+  mutate(var = ifelse(grepl('solar',variable),'solar',var)) %>%
   mutate(res = ifelse(grepl('20',variable),'20','')) %>%
    mutate(res = ifelse(grepl('100',variable),'100',res)) %>%
    mutate(res = ifelse(grepl('200',variable),'200',res)) %>%
@@ -126,13 +133,13 @@ stations_vars_df <-  stations_melt_df %>%
 
 
 
-#### Exploratory Data Analysis
+### Exploratory Data Analysis
 
-##### Raster values 
+#### Raster values 
 
 Check out raster statistics as a table
-```{r}
-rasters_names_list <- c("dem","slp","aspg","cp","tpi300m","tpi2000m","north","east")
+```{r raster statistics}
+rasters_names_list <- c("dem","slp","aspg","cp","tpi300m","tpi2000m","tpi5000m","north","east")
 df <- data.frame(names = character(),min=double(),mean=double(),max=double())
 c <- 0
 for(raster_name in rasters_names_list){
@@ -188,14 +195,14 @@ for(raster_name in rasters_names_list){
 
 
 Check out histograms of the raster values. Compare between different resolutions.
-```{r, echo = FALSE}
+```{r, echo = FALSE, eval =FALSE}
 
-# get all rasters as list of lists
-variables <- list('dem','slp','aspg','cp','tpi300m','tpi2000m','north','east')
+# # get all rasters as list of lists
+variables <- list('dem','slp','aspg','cp','tpi300m','tpi2000m','tpi5000m','north','east')
 
 raster_lists <- list()
 for(j in 1:length(variables)){
-  
+
   if(variables[j]=='tpi300m'){
     resolutions <- list('20','100','200')
   }else{
@@ -203,8 +210,8 @@ for(j in 1:length(variables)){
   }
   inner_list <- list()
   for(i in 1:length(resolutions)){
-   
-    inner_list[[i]] <-raster(paste0('d:\\data\\rasters\\input_rasters\\',variables[j],resolutions[i],'m.tif'))
+
+    inner_list[[i]] <-raster(paste0('f:\\data\\rasters\\input_rasters\\',variables[j],resolutions[i],'m.tif'))
   }
   raster_lists[[j]] <- inner_list
 }
@@ -220,19 +227,21 @@ for(j in 1:length(raster_lists)){
   for(i in 1:length(raster_lists[[j]])){
     if(i == 1){
       # get breaks
-      h <- hist(getValues(raster_lists[[j]][[i]]), plot = FALSE, main = variables[[j]], nclass = 28)
+      h <- graphics::hist(getValues(raster_lists[[j]][[i]]), plot = FALSE, main = variables[[j]], nclass = 28)
       }
     
   
    tryCatch(
     expr = {m <- graphics::hist(getValues(raster_lists[[j]][[i]]), breaks = h$breaks
-            , main = paste0(variables[[j]],resolutions[[i]]),xlab = 'Raster Cell Value')},
+            , main = paste0(variables[[j]],resolutions[[i]]),xlab = 'Raster Cell Value',
+            freq = FALSE)},
     error = function(e){ 
      # print(raster_lists[[j]][[i]]%>%names)
          m <- graphics::hist(getValues(raster_lists[[j]][[i]])
                   , main = paste0(variables[[j]],resolutions[[i]])
                   , xlab = 'Raster Cell Value'
-                  , nclass = 28)}
+                  , nclass = 28
+                  , freq = FALSE)}
             )
     
   print(raster_lists[[j]][[i]]%>%names) 
@@ -265,7 +274,7 @@ for(p in q){
 }
 
 for(df in df_list){
-  print(kable(df, digits = 2))
+  print(kable(df, digits = 4))
 }
 
 
@@ -300,18 +309,65 @@ for(df in df_list){
 
 ##### Raster values  at weather stations
 Ideally, weather stations would cover the full range of raster values. Also, compare between resolutions.
-```{r}
+```{r , echo = FALSE}
+library(swnsmodelr)
+library(ggplot2)
+in_df <- swns_new %>% filter(date_time == ymd('2012-06-01')) %>% 
+    mutate(station = ifelse(stationid %in% nscc_stations_list,'nscc','ext'))
 for(raster in rasters_list){
-  df <- extract(raster, swns_stations_sp) %>% sort
-  plot(x=seq(1:length(df)),df,
-             ylim = c(cellStats(raster,min),cellStats(raster,max)),
-       xlab = "Stations",
-       ylab= names(raster))
+  col <- raster %>% names()
+  df <- extract_constant_raster_values(in_df,list(raster)) %>% 
+    arrange(.data[[col]])
+
+  print(ggplot(data = df, aes(x = reorder(stationid, 1:length(df[[1]])), y = .data[[col]])) +
+          geom_point(aes(fill = station, shape = station),size = 2.2, alpha = 0.8) +
+          labs(x = 'Stations',y = .data[[col]], title = col) +
+          scale_y_continuous(limits = c(cellStats(raster,min),cellStats(raster,max))) +
+          scale_shape_manual(values=c(21,24))+
+          
+          theme(
+            axis.text.x=element_blank(),
+            panel.background = element_rect(fill='white', colour = 'grey'), #transparent panel bg
+            #plot.background = element_rect(fill='white',colour ='white'), #transparent plot bg
+            panel.grid.major.y =   element_line(color = 'grey'), #remove major gridlines
+            panel.grid.major.x = element_blank(), #remove minor gridlines
+            #legend.background = element_rect(fill='transparent'), #transparent legend bg
+            legend.box.background = element_rect(fill='transparent',colour='grey'), #transparent legend panel
+            legend.key = element_rect(colour = 'grey', fill = NA)
+          ) 
+          
+
+  
+  )
+  
+  
 }
+
 ```
 
 
+##### Maximum and minimum raster values at weather stations
+What are the maximum and minimum values covered by weather stations for each raster?
+```{r}
+options(scipen=999)
+# get weather station values for a single day
+df <- stations_vars_df %>% 
+  # filter(stationid %in% nscc_stations_list) %>%
+  filter(date_time == ymd('2012-06-01'))
+df_max <- df  %>%
+  group_by(variable) %>%
+  slice_max(value) %>%
+  ungroup() 
 
+df_min <- df   %>%
+  group_by(variable) %>%
+  slice_min(value) %>%
+  ungroup() 
+
+
+df_out <- bind_rows(df_max,df_min)
+
+```
 
 ##### Temperature values over the year
 Check out the temperatures recorded at each station over the year, for each year.
@@ -325,4 +381,106 @@ print(ggplot(data = stations_df %>% filter(stationid == station_now), aes(x = yd
 
 }
 
+```
+
+
+### Model the temperatures
+
+#### Define the model
+```{r}
+df <- swnsmodelr::swns_stations_solar_df %>% add_date_columns() %>% filter(stationid %in% swnsmodelr::nscc_stations_list)
+m1 <- gam(temp_mean ~ 
+           year + 
+           s(yday) + 
+           s(east1000m, north1000m) + 
+           s(east1000m) + 
+           s(north1000m) +
+           s(dem1000m) +
+           s(cp1000m) +
+           s(tpi5000m1000m)+
+           s(solar1000m)
+           , data=df )
+summary(m1)
+
+m2 <- gam(temp_mean ~ 
+           year + 
+           s(yday) + 
+           s(east1000m, north1000m) + 
+           s(east1000m) + 
+           s(north1000m) +
+           s(dem1000m) +
+           s(cp1000m) +
+           s(solar1000m)
+           , data=df )
+summary(m2)
+
+
+```
+Check out residuals at validation (external) stations
+```{r}
+resid_df <- swnsmodelr::stations_df %>% 
+  filter(stationid %in% swnsmodelr::ext_stations_list) %>%
+  add_date_columns()
+resid_df <- add_residuals(resid_df,m) %>% select(stationid, resid, date_time)
+```
+
+
+Create the raster brick
+```{r}
+resolution <- 1000
+today <- ymd('2012-06-01')
+year_n <- year(today)
+yday_n <- yday(today)
+
+# grab constant rasters with given resolution
+for(raster in rasters_list){
+  print(raster %>% names())
+  
+  if(res(raster) == resolution){
+    if(substring(names(raster),1,3)=='dem'){
+      dem <- raster
+      
+      #Create date rasters
+       year_raster <- dem * 0 + year_n
+       names(year_raster) <- 'year'
+       yday_raster <- year_raster*0 + yday_n
+       names(yday_raster) <- 'yday'
+       rasters_brick <- raster::brick(year_raster,yday_raster,dem)
+       
+      
+    }else{
+      rasters_brick <- raster::addLayer(rasters_brick,raster)
+    }
+    
+    
+  }
+}
+
+
+
+#Solar raster
+solar_df <- make_temporal_raster_df(
+  in_folder = paste0("F:\\GOES\\",resolution,'m'),
+  start_date = ymd('2012-01-01'),
+  end_date   = ymd('2017-12-31'),
+  date_chars = c(16,-5),
+  date_format = "%Y_%j",
+  extension = ".tif")
+df <- solar_df %>% filter(date_time == today)
+
+try(solar_raster <- raster::raster(df$path_field[[1]]))
+try(names(solar_raster) <- paste0('solar',resolution,'m'))
+try(
+  rasters_brick <- raster::addLayer(rasters_brick,solar_raster)
+)
+
+```
+ 
+Predict with the gam using the raster brick, to generate a modelled raster.
+```{r}
+gam_raster <- raster::predict(rasters_brick,m1)
+plot(gam_raster)
+
+gam_raster <- raster::predict(rasters_brick,m2)
+plot(gam_raster)
 ```
