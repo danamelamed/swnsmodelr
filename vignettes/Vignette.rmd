@@ -74,15 +74,6 @@ for(raster in all_rasters){
 
 ```
 
-Extract values of constant rasters at stations to a dataframe.
-
-
-```{r extract constant rasters}
-swns_stations_df <- extract_constant_raster_values(swns_stations_df,
-                                              rasters_list)
-
-
-```  
 
 
 ### Bring Temporal Rasters into R Environment
@@ -109,9 +100,22 @@ swns_stations_df <- swns_stations_df %>% mutate( df[length(df)])
 
 ```
 
+
+
+Extract values of constant rasters at stations to a dataframe.
+
+
+```{r extract constant rasters}
+swns_stations_df <- extract_constant_raster_values(swns_stations_df,
+                                              rasters_list)
+
+
+```  
+
+
 melt
 ```{r melt dataframe}
-swns_stations_melt_df <- reshape2::melt(swns_stations_solar_df, id.vars = c('stationid','date_time','temp_min','temp_max','temp_mean','EASTING','NORTHING'))
+swns_stations_melt_df <- reshape2::melt(swns_stations_df, id.vars = c('stationid','date_time','temp_min','temp_max','temp_mean','EASTING','NORTHING'))
 swns_stations_vars_df <-  stations_melt_df %>% 
   mutate(var = ifelse(grepl('dem',variable),'dem','')) %>%
   mutate(var = ifelse(grepl('tpi300m',variable),'tpi300m',var)) %>%
@@ -353,7 +357,7 @@ options(scipen=999)
 # get weather station values for a single day
 df <- stations_vars_df %>% 
   # filter(stationid %in% nscc_stations_list) %>%
-  filter(date_time == ymd('2012-06-01'))
+  filter(date_time == ymd('2012-08-01'))
 df_max <- df  %>%
   group_by(variable) %>%
   slice_max(value) %>%
@@ -388,47 +392,135 @@ print(ggplot(data = stations_df %>% filter(stationid == station_now), aes(x = yd
 
 #### Define the model
 ```{r}
-df <- swnsmodelr::swns_stations_solar_df %>% add_date_columns() %>% filter(stationid %in% swnsmodelr::nscc_stations_list)
-m1 <- gam(temp_mean ~ 
-           year + 
-           s(yday) + 
-           s(east1000m, north1000m) + 
-           s(east1000m) + 
-           s(north1000m) +
-           s(dem1000m) +
-           s(cp1000m) +
-           s(tpi5000m1000m)+
-           s(solar1000m)
-           , data=df )
-summary(m1)
+df <- swnsmodelr::swns_stations_df %>% add_date_columns() %>% filter(stationid %in% swnsmodelr::nscc_stations_list)
+# m1 <- tryCatch(
+#     expr = {m <- gam(temp_mean ~ 
+#            year + 
+#            s(yday) + 
+#            s(east200m, north200m) + 
+#            s(east200) + 
+#            s(north200m) +
+#            s(dem200m) +
+#            s(cp200m) +
+#            s(tpi5000m200m)+
+#            s(solar200m)
+#            , data=df )},
+#     error = function(e){ 
+#      m <- gam(temp_mean ~ 
+#            year + 
+#            s(yday) + 
+#            s(east200m, north200m) + 
+#            s(east200m) + 
+#            s(north200m) +
+#            s(dem200m) +
+#            s(cp200m) +
+#            s(tpi5000m200m)
+#            , data=df )
+#      return(m)} 
+# )
+# 
+# summary(m1)
+# 
 
-m2 <- gam(temp_mean ~ 
-           year + 
-           s(yday) + 
-           s(east1000m, north1000m) + 
-           s(east1000m) + 
-           s(north1000m) +
-           s(dem1000m) +
-           s(cp1000m) +
-           s(solar1000m)
+  m1 <- gam(temp_mean ~
+           year +
+           s(yday) +
+           s(east200m) +
+           s(north200m) +
+           s(dem200m) +
+           s(cp200m) 
            , data=df )
-summary(m2)
+ 
+  
+df <- df %>% filter(!is.na(solar200m))
+     m2 <- gam(temp_mean ~
+           year +
+           s(yday) +
+           s(east200m) +
+           s(north200m) +
+           s(dem200m) +
+           s(cp200m)+
+           s(solar200m)
+           , data=df )
 
+# summary(m2)
+
+# m1 <- gam(temp_mean ~  
+#             year +
+#             s(yday) +
+#            s(east200m) + 
+#            s(north200m) +
+#            s(dem200m) +
+#            s(cp200m),
+#             data=df )
+# m2 <- gam(temp_mean ~  
+#             year +
+#             s(yday) +
+#             s(east200m, north200m)+
+#            s(east200m) + 
+#            s(north200m) +
+#            s(dem200m) +
+#            s(cp200m),
+#             data=df )
+# 
+# m3 <- gam(temp_mean ~  
+#             year +
+#             s(yday) +
+#             s(solar200m)+
+#            s(east200m) + 
+#            s(north200m) +
+#            s(dem200m) +
+#            s(cp200m),
+#             data=df )
+# 
+# m4 <- gam(temp_mean ~  
+#             year +
+#             s(yday) +
+#             s(tpi2000m200m)+
+#            s(east200m) + 
+#            s(north200m) +
+#            s(dem200m) +
+#            s(cp200m),
+#             data=df )
+# m5 <- gam(temp_mean ~  
+#             year +
+#             s(yday) +
+#             s(tpi300m200m)+
+#            s(east200m) + 
+#            s(north200m) +
+#            s(dem200m) +
+#            s(cp200m),
+#             data=df )
+# 
+# summary(m1)
+# summary(m2)
+# summary(m3)
 
 ```
 Check out residuals at validation (external) stations
 ```{r}
-resid_df <- swnsmodelr::stations_df %>% 
+resid_df <- swnsmodelr::swns_stations_df %>% 
   filter(stationid %in% swnsmodelr::ext_stations_list) %>%
   add_date_columns()
-resid_df <- add_residuals(resid_df,m) %>% select(stationid, resid, date_time)
+resid_df <- add_residuals(resid_df,m1, var = "resid_m1") 
+resid_df <- add_residuals(resid_df,m2, var = "resid_m2") 
+resid_df <- add_residuals(resid_df,m3, var = "resid_m3") 
+resid_df <- add_residuals(resid_df,m4, var = "resid_m4") 
+resid_df <- add_residuals(resid_df,m5, var = "resid_m5") 
+ggplot(data=resid_df %>% filter(year == 2012)) +
+  #geom_smooth(aes(x=date_time, y=resid_m1),colour='blue') +
+  #geom_smooth(aes(x=date_time, y=resid_m2),colour='red')  +
+  geom_smooth(aes(x=date_time, y=resid_m3),colour='black') +
+  geom_smooth(aes(x=date_time, y=resid_m4),colour='yellow')  +
+  geom_smooth(aes(x=date_time, y=resid_m5),colour='orange')   
+  
 ```
 
 
 Create the raster brick
 ```{r}
-resolution <- 1000
-today <- ymd('2012-06-01')
+resolution <- 200
+today <- ymd('2012-08-01')
 year_n <- year(today)
 yday_n <- yday(today)
 
@@ -484,3 +576,63 @@ plot(gam_raster)
 gam_raster <- raster::predict(rasters_brick,m2)
 plot(gam_raster)
 ```
+
+
+Calculate Daily GDD rasters from daily temperature mean rasters
+```{r}
+in_raster_folder <- "f://output//daily_mean//tpi_tests//tpi2000m200m//"
+out_raster_folder <- "f://output//gdd5//tpi_tests//tpi2000m200m//"
+
+
+# Calculate GDD5
+t_base <- 5
+
+
+years <- c('2012','2013','2014','2015','2016','2017')
+
+df <- make_temporal_raster_df(in_raster_folder,
+                              ymd('2012-01-01'),
+                              ymd('2017-12-31'),c(11,20),'%Y-%m-%d')
+
+
+for(year in years){
+  year_df <- df %>% filter(year(date_time)==!!year)
+  
+  c=0
+  for(raster_path in year_df[[1]]){
+    
+    raster_name <- basename(raster_path)
+    new_name <- paste('gdd',5,substring(raster_name,
+                                         11,
+                                         nchar(raster_name)),
+                      sep="_")
+    
+    mean_raster <- raster::raster(raster_path)
+    gdd_raster <- mean_raster -t_base
+    gdd_raster[gdd_raster < 0] <- 0
+    if(c >0){
+      gdd_raster <- acc_raster + gdd_raster
+      
+    }
+    raster::writeRaster(gdd_raster,
+                        file.path(out_raster_folder,new_name),
+                        overwrite = TRUE)
+    acc_raster <- gdd_raster
+    
+    
+    
+    c<-c+1
+  }
+}
+
+
+
+```
+
+
+
+Which solar days are missing?
+```{r}
+??
+
+``
