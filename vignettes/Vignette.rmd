@@ -580,8 +580,8 @@ plot(gam_raster)
 
 Calculate Daily GDD rasters from daily temperature mean rasters
 ```{r}
-in_raster_folder <- "f://output//daily_mean//tpi_tests//tpi2000m200m//"
-out_raster_folder <- "f://output//gdd5//tpi_tests//tpi2000m200m//"
+in_raster_folder <- "f://output//daily_mean//tpi_tests//tpi300m200m//"
+out_raster_folder <- "f://output//gdd5//tpi_tests//tpi300m200m//"
 
 
 # Calculate GDD5
@@ -633,6 +633,10 @@ for(year in years){
 
 Which solar days are missing?
 ```{r}
-??
+d <- solar_irradiance_rasters_df$date_time
+d <- as.Date(d)
+date_range <- seq(min(d), max(d), by = 1) 
+date_range[!date_range %in% d] 
 
-``
+```
+
