@@ -1,0 +1,174 @@
+---
+title: "Gather Results"
+author: "Dana Melamed"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.align = 'center')
+knitr::opts_chunk$set(fig.width = 9)
+knitr::opts_chunk$set(fig.height = 7)
+library(swnsmodelr)
+par(mfrow=c(2,2))
+```
+
+## Model temperature with each input variable individually
+
+```{r}
+# Prepare the data
+# Make a list of input rasters
+in_folder <- 'f:\\data\\rasters\\input_rasters\\'
+raster_names <- list('dem700m','cp700m','east700m','north700m','tpi5000m700m',
+                     'aspg700m','slp700m')
+ext = '.tif'
+rasters_list <- lapply(X=paste0(in_folder,raster_names,ext),FUN=raster::raster)
+
+#transform
+rasters_list[[2]]<-rasters_list[[2]]^0.5
+names(rasters_list[[2]]) <- 'cp700m'
+
+# brick rasters
+rasters_brick2 <- raster::brick(rasters_list)
+
+# extract rasters to dataframe
+df_in <- swns_stations_df %>% 
+  dplyr::select(stationid,temp_min,temp_max,EASTING,NORTHING,date_time) %>%
+  extract_constant_raster_values(rasters_list) %>% add_date_columns()
+
+# calculate gdd10 in dataframe
+df <- df_in %>% filter(year=='2012'& between(month,4,11))%>%
+ # select(stationid,temp_min,temp_max,date_time)%>%
+  mutate(temp_mean=(temp_min+temp_max)/2)%>%
+  filter(stationid %in% nscc_stations_list)%>%
+ # filter(stationid!='6456')%>%
+ # filter(stationid!='47187')%>%
+   filter(stationid!='S100') %>% # 2012
+ #   filter(stationid!='S120')%>%  # 2012, cold anyways
+     filter(stationid!='S160') %>% # 2012, early in season/cold
+    filter(stationid!='S20')%>% #2012
+     filter(stationid != 'S60') %>% #2012
+    filter(stationid != 'S80') %>% #2012
+ filter(stationid != 'CL1') %>%
+ #  filter(stationid != 'SH6') %>% #2013
+  mutate(gdd10_daily=ifelse(temp_mean>10,temp_mean-10,0))%>%
+  group_by(stationid)%>%
+  mutate(gdd10=sum(gdd10_daily,na.rm=TRUE))%>%
+  filter(date_time==max(date_time))
+  
+```
+
+### Position: East, North, (East,North), and Coastal Proximity
+
+```{r}
+m_list <- list()
+m_list[[1]]<- gam(gdd10~s(east700m),data=df,method='REML')
+m_list[[2]]<- gam(gdd10~s(north700m),data=df,method='REML')
+m_list[[3]]<- gam(gdd10~s(east700m)+s(north700m),data=df,method='REML')
+m_list[[4]]<- gam(gdd10~s(east700m,north700m),data=df,method='REML')
+m_list[[5]]<- gam(gdd10~s(cp700m),data=df)
+m_list[[6]]<- gam(gdd10~s(east700m,north700m,k=10),data=df,method='REML')
+
+for(m in m_list){
+  
+  gam_raster <- raster::predict(rasters_brick2,m)
+  plot(gam_raster, main=m$formula, col=rev(rainbow(100)[1:70]))
+  points(swns_stations_sp)
+  par(mfrow=c(2,2),mar=c(5,6,2,2)+0.1)
+  plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+}
+
+```
+
+### Land Surface: DEM, Slope, Aspect (Guan et al., 2013), TPI5000m700m
+
+```{r}
+m_list <- list()
+m_list[[1]]<- gam(gdd10~s(dem700m),data=df,method='REML')
+m_list[[2]]<- gam(gdd10~s(aspg700m),data=df,method='REML')
+m_list[[3]]<- gam(gdd10~s(slp700m),data=df,method='REML')
+m_list[[4]]<- gam(gdd10~s(tpi5000m700m),data=df,method='REML')
+for(m in m_list){
+  gam_raster <- raster::predict(rasters_brick2,m)
+  plot(gam_raster, main=m$formula, col=rev(rainbow(100)[1:70]))
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+}
+```
+
+## Combine Variables
+
+Above, it seems the reasonable rasters to model with are (East,North), Coastal Proximity, DEM
+
+### (East,North) + (x)
+
+```{r}
+m_list <- list()
+m_list[[1]] <- gam(gdd10~s(east700m,north700m) +s(cp700m),data=df,method='REML')
+m_list[[2]] <- gam(gdd10~s(east700m,north700m)+ s(dem700m),data=df,method='REML')
+
+for(m in m_list){
+  
+  gam_raster <- raster::predict(rasters_brick2,m)
+  plot(gam_raster, main=m$formula, col=rev(rainbow(100)[1:70]))
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+}
+```
+
+### te(DEM, cp) \| s(dem) + s(cp)
+
+```{r}
+m_list <- list()
+m_list[[1]] <- gam(gdd10~s(dem700m)+s(cp700m),data=df,method='REML')
+m_list[[2]] <- gam(gdd10~te(dem700m,cp700m),data=df,method='REML')
+
+for(m in m_list){
+  gam_raster <- raster::predict(rasters_brick2,m)
+  plot(gam_raster, main=m$formula, col=rev(rainbow(100)[1:70]))
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE,     pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+}
+```
+
+### Combine... s(east,north) + s(dem,cp)|s(dem) +s(cp)
+
+```{r}
+m_list <- list()
+m_list[[1]] <- gam(gdd10~te(dem700m,cp700m)+s(east700m,north700m),data=df,method='REML')
+m_list[[2]] <- gam(gdd10~s(dem700m)+s(cp700m)+s(east700m,north700m),data=df,method='REML')
+
+for(m in m_list){
+  
+  gam_raster <- raster::predict(rasters_brick2,m)
+  plot(gam_raster, main=m$formula, col=rev(rainbow(100)[1:70]))
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE,  pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+}
+```
+
+
+
+### Knots
+Define knots so that wiggliness is increased
+```{r}
+m_list <- list()
+m_list[[1]] <- gam(gdd10~te(dem700m,cp700m,k=5)+s(east700m,north700m,k=10),data=df,method='REML')
+m_list[[2]] <- gam(gdd10~s(dem700m,k=30,bs='cr')+s(cp700m,k=5,bs='cr')+s(east700m,north700m,k=20),data=df,method='REML',family=gaussian())
+
+m<-gam(gdd10~s(cp700m),data=df)
+for(m in m_list){
+  
+  gam_raster <- raster::predict(rasters_brick2,m)
+  plot(gam_raster, main=m$formula, col=rev(rainbow(100)[1:70]))
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+}
+```
