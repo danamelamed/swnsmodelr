@@ -1,4 +1,4 @@
-
+library(swnsmodelr)
 
 # get all rasters as list of lists
 variables <- list('dem','slp','asp','ptoc','tpi300m','tpi2000m')
@@ -35,5 +35,5 @@ for(j in 1:length(raster_lists)){
       h <- hist(getValues(raster_lists[[j]][[i]], main = variables[j]))}
   }
 }
-par(mfrow=c(2,3))
+
 

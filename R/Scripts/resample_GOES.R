@@ -1,11 +1,11 @@
 # resample solar irradiance rasters
 library(raster)
 # to 20m...
-output_folder <- 'D:\\GOES\\1000m'
-input_folder <- 'D:\\GOES\\700m'
+output_folder <- 'D:\\GOES\\700m'
+input_folder <- 'D:\\GOES\\700m_original'
 
 
-raster100m <- raster('D:\\data\\rasters\\input_rasters\\dem1000m.tif')
+raster700m <- raster('D:\\data\\rasters\\input_rasters\\dem700m.tif')
 
 
 
@@ -20,7 +20,7 @@ for(tif in input_files){
       print('exists')
     }else{
      try(new_raster <- projectRaster(from = raster(file.path(input_folder,tif)),
-                                 to   = raster1000m,
+                                 to   = raster700m,
                                  method = 'bilinear',
                                  filename = file.path(output_folder,tif),
                                  overwrite = FALSE))}
