@@ -50,28 +50,7 @@ df_in <- stations_df %>%
   extract_constant_raster_values(rasters_list) %>% add_date_columns()
 ```
 
-Find missing data
-```{r}
-gs_df <- stations_df %>% filter(year(date_time)=='2013') %>%
- filter(stationid %in% nscc_stations_list | stationid == '47187' | stationid =='6354')
-stations <- gs_df$stationid %>% unique()
 
-for(station in stations){
-    dataframe <- gs_df %>% filter(stationid == !!station)
-    d <- dataframe$date_time 
-    d <- as.Date(d)
-    date_range <- seq(min(d), max(d), by = 1) 
-
-
-    
-    if(length(date_range[!date_range %in% d])>0){
-      print(station)
-    print(date_range[!date_range %in% d] )
-    }
-    
-
-}
-```
 
 
 

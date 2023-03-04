@@ -1,0 +1,134 @@
+---
+title: "Input Raster Histograms"
+author: "Dana Melamed"
+date: "9/23/2022"
+output: word_document
+---
+
+```{r, echo = FALSE}
+library(swnsmodelr)
+library(knitr)
+library(ggplot2)
+options(scipen=999)
+knitr::opts_chunk$set(eval = FALSE)
+# get all rasters as list of lists
+variables <- list('dem','slp','aspg','cp','tpi300m','tpi2000m','north','east')
+
+raster_lists <- list()
+for(j in 1:length(variables)){
+  
+  if(variables[j]=='tpi300m'){
+    resolutions <- list('20','100','200')
+  }else{
+    resolutions <- list('20','100','200','700','1000')
+  }
+  inner_list <- list()
+  for(i in 1:length(resolutions)){
+   
+    inner_list[[i]] <-raster(paste0('F:\\data\\rasters\\input_rasters\\',variables[j],resolutions[i],'m.tif'))
+  }
+  raster_lists[[j]] <- inner_list
+}
+
+
+
+# create histograms for every raster... keep the bins the same as the 20m resolution raster
+q <- list()
+for(j in 1:length(raster_lists)){ 
+  p <- list()
+  
+  
+  for(i in 1:length(raster_lists[[j]])){
+    if(i == 1){
+      # get breaks
+      h <- hist(getValues(raster_lists[[j]][[i]]),  main = variables[[j]], nclass = 15,
+                plot = FALSE)
+      }
+    
+   raster_name =  raster_lists[[j]][[i]]%>%names
+   tryCatch(
+    expr = {m <- graphics::hist(getValues(raster_lists[[j]][[i]])
+                                , breaks = h$breaks
+                                , main = raster_name
+                                , ylab = 'Relative Frequency'
+                                ,xlab = 'Raster Cell Value'
+                                , plot = FALSE)
+    },
+    error = function(e){ 
+     
+         m <- graphics::hist(getValues(raster_lists[[j]][[i]])
+                  , main = raster_name
+                  , xlab = 'Raster Cell Value'
+                  , ylab = 'Relative Frequency'        
+                  , nclass =15
+                  , plot = FALSE)
+         }
+            )
+  m$density = m$counts/sum(m$counts)*100
+  print(raster_name) 
+  p[[i]] <- m
+  m$counts<-m$counts/sum(m$counts)
+  plot(m, main = raster_name
+                  , xlab = 'Raster Cell Value'
+                  , ylab = 'Percentage'
+                  , freq = FALSE
+                  , plot = TRUE)
+  }
+  
+ q[[j]] <- p   
+ 
+}
+
+
+```
+
+```{r, eval = FALSE}
+# for each variable
+df_list <- list()
+c = 1
+for(p in q){
+  df <- data.frame(mids20m = p[[1]]$mids)
+
+  try(df$var20m <- p[[1]]$counts/sum(p[[1]]$counts)*100)
+  try(df$var100m <- p[[2]]$counts/sum(p[[2]]$counts)*100)
+  try(df$var200m <- p[[3]]$counts/sum(p[[3]]$counts)*100)
+  try(df$var700m <- p[[4]]$counts/sum(p[[4]]$counts)*100)
+  try(df$var1000m <- p[[5]]$counts/sum(p[[5]]$counts)*100)
+  df_list[[c]] <- df
+  c <- c+ 1
+  
+}
+
+for(df in df_list){
+  print(kable(df, digits = 4))
+}
+
+
+```
+
+```{r, eval = FALSE}
+#for each df in the list
+i <- 1
+for(df in df_list){
+      var = variables[i]
+      print(ggplot(data = df, aes(x = mids20m, y = var20m))+
+       geom_bar(stat='identity')+
+        labs(y = 'Percentage', x = paste0(var,'20m')))
+      print(ggplot(data = df, aes(x = mids20m, y = var100m))+
+        geom_bar(stat='identity')+
+        labs(y = 'Percentage', x = paste0(var,'100m')))
+      print(ggplot(data = df, aes(x = mids20m, y = var200m))+
+        geom_bar(stat='identity')+
+        labs(y = 'Percentage', x = paste0(var,'200m')))
+      try(print(ggplot(data = df, aes(x = mids20m, y = var700m))+
+        geom_bar(stat='identity')+
+        labs(y = 'Percentage', x = paste0(var,'700m'))))
+      try(print(ggplot(data = df, aes(x = mids20m, y = var1000m))+
+        geom_bar(stat='identity')+
+        labs(y = 'Percentage', x = paste0(var,'1000m'))))
+     i <- i+1
+  
+  }
+
+
+```

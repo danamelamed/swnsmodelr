@@ -8,16 +8,16 @@ daily_df <- daily_df_in %>% filter(year(date_time) == 2012) %>%
   mutate(gdd10_daily_round= round(gdd10_daily,0)) %>%
   group_by(stationid) %>%
   mutate(gdd10an = sum(gdd10_daily_round)) %>%
-  filter(date_time == max(date_time)) %>%
-  select(date_time,stationid,gdd10an_total, gdd10an, gdd10, gdd10_daily)
+  filter(date_time == max(date_time))# %>%
+ # select(date_time,stationid,gdd10an_total, gdd10an, gdd10, gdd10_daily)
 
 daily_df <- daily_df %>% mutate(diff = gdd10an_total - gdd10an)
 
 annual_df <- annual_df %>% filter(year(date_time)==2012)
 
-annual_df %>% select(date_time, stationid, gdd10an_total) %>%
-  filter(stationid == 'BR2')
-
-daily_df %>% select(date_time, stationid, gdd10an) %>%
-  filter(stationid == 'BR2')
+# annual_df %>% select(date_time, stationid, gdd10an_total) %>%
+#   filter(stationid == 'BR2')
+# 
+# daily_df %>% select(date_time, stationid, gdd10an) %>%
+#   filter(stationid == 'BR2')
 

@@ -1,0 +1,73 @@
+---
+title: "Weather Station Coverage"
+author: "Dana Melamed"
+date: "9/23/2022"
+output: word_document
+---
+
+all stations
+
+```{r , eval=FALSE}
+library(swnsmodelr)
+knitr::opts_chunk$set(eval = FALSE)
+for(raster in rasters_list){
+  df <- extract(raster, swns_stations_sp) %>% sort
+  plot(x=seq(1:length(df)),df,
+             ylim = c(cellStats(raster,min),cellStats(raster,max)),
+       xlab = "Stations",
+       ylab= names(raster))
+}
+```
+
+nscc stations only
+```{r , eval=FALSE}
+library(swnsmodelr)
+in_df <- swns_stations_df %>% filter(date_time == ymd('2012-06-01')) %>% 
+    filter(stationid %in% nscc_stations_list)
+for(raster in rasters_list){
+  
+  df <- extract_constant_raster_values(in_df,list(raster))
+
+  plot(1:length(df[[8]]),df[[8]] %>% sort(na.last=TRUE),
+             ylim = c(cellStats(raster,min),cellStats(raster,max)),
+       xlab = "Stations",
+       ylab= names(raster))
+}
+```
+
+
+```{r , eval=TRUE, echo = FALSE}
+library(swnsmodelr)
+library(ggplot2)
+in_df <- swns_stations_df %>% filter(date_time == ymd('2012-06-01')) %>% 
+    mutate(station = ifelse(stationid %in% nscc_stations_list,'nscc','ext'))
+for(raster in rasters_list){
+  col <- raster %>% names()
+  df <- extract_constant_raster_values(in_df,list(raster)) %>% 
+    arrange(.data[[col]])
+
+  print(ggplot(data = df, aes(x = reorder(stationid, 1:length(df[[1]])), y = .data[[col]])) +
+          geom_point(aes(fill = station, shape = station),size = 2.2, alpha = 0.8) +
+          labs(x = 'Stations',y = .data[[col]], title = col) +
+          scale_y_continuous(limits = c(cellStats(raster,min),cellStats(raster,max))) +
+          scale_shape_manual(values=c(21,24))+
+          
+          theme(
+            axis.text.x=element_blank(),
+            panel.background = element_rect(fill='white', colour = 'grey'), #transparent panel bg
+            #plot.background = element_rect(fill='white',colour ='white'), #transparent plot bg
+            panel.grid.major.y =   element_line(color = 'grey'), #remove major gridlines
+            panel.grid.major.x = element_blank(), #remove minor gridlines
+            #legend.background = element_rect(fill='transparent'), #transparent legend bg
+            legend.box.background = element_rect(fill='transparent',colour='grey'), #transparent legend panel
+            legend.key = element_rect(colour = 'grey', fill = NA)
+          ) 
+          
+
+  
+  )
+  
+  
+}
+
+```

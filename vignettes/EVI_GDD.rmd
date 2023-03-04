@@ -12,6 +12,7 @@ output:
 ```{r warning=FALSE, echo=FALSE, message = FALSE}
 library(swnsmodelr)
 library(ggplot2)
+knitr::opts_chunk$set(eval = FALSE)
 ```
 
 

@@ -11,6 +11,7 @@ indent: true
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(error = TRUE)
+knitr::opts_chunk$set(eval = FALSE)
 library(swnsmodelr)
 library(ggplot2)
 ```
@@ -107,7 +108,7 @@ head(swns_stations_df_200)
 ```{r fig.hold=TRUE, message=FALSE, warning=FALSE,height = 7, fig.width= 7}
 ggplot(data = swns_stations_df %>%
          filter(!duplicated(stationid)) %>%
-         dplyr::mutate(origin = if_else(stationid %in% study_stations_list,
+         dplyr::mutate(origin = if_else(stationid %in% nscc_stations_list,
                                                                "study",
                                                                "ext"))) +
   geom_point(aes(x = EASTING, y = NORTHING, colour = origin)) +
@@ -124,7 +125,7 @@ The following code was used to separate the stations, and can be easily altered 
 # Choose modelling stations
 model_stations_df <- swns_stations_df_200 %>%
           # 1. Include all study stations
-  filter(stationid %in% study_stations_list )
+  filter(stationid %in% nscc_stations_list )
 
 # Choose validation stations
 val_stations_df   <- swns_stations_df_200 %>% 
