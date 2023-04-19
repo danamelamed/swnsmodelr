@@ -2,14 +2,14 @@
 title: "GDD10 Accumulated Monthly"
 author: "Dana Melamed"
 date: "`r Sys.Date()`"
-output: html_document
+output: word_document
 ---
 
 Accumulate gdd10 from the beginning to end of each month, and apply the model.
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(eval = FALSE) 
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(eval = FALSE)
 knitr::opts_chunk$set(fig.align = 'center')
 knitr::opts_chunk$set(fig.width = 9)
 knitr::opts_chunk$set(fig.height = 7)
@@ -22,16 +22,16 @@ par(mfrow=c(2,2))
 # Prepare the data
 # Make a list of input rasters
 in_folder <- 'f:\\data\\rasters\\input_rasters\\'
-raster_names <- list('dem700m','cp700m','east700m','north700m','tpi5000m700m',
-                     'asp700m','slp700m')
+raster_names <- list('dem500m','cp500m','east500m','north500m','tpi5000m500m',
+                     'asp500m','slp500m')
 ext = '.tif'
 rasters_list <- lapply(X=paste0(in_folder,raster_names,ext),FUN=raster::raster)
 
 #transform
 rasters_list[[2]]<-rasters_list[[2]]^0.5
-names(rasters_list[[2]]) <- 'cp700m'
+names(rasters_list[[2]]) <- 'cp500m'
 rasters_list[[6]] <- rasters_list[[7]]*cos(rasters_list[[6]])
-names(rasters_list[[6]]) <- 'asp700m'
+names(rasters_list[[6]]) <- 'asp500m'
 
 # brick rasters
 rasters_brick2 <- raster::brick(rasters_list)
@@ -45,7 +45,7 @@ stations_df <- swns_stations_df %>% dplyr::select(date_time,
                                            temp_max)
 df_in <- stations_df %>% 
   dplyr::select(stationid,temp_min,temp_max,EASTING,NORTHING,date_time) %>%
-  extract_constant_raster_values(rasters_list) %>% add_date_columns()
+  extract_constant_raster_values(paste0(names(rasters_brick),'500m'),rasters_brick = rasters_brick2) 
 ```
 
 
@@ -88,23 +88,26 @@ df_15 <- df %>% dplyr::filter(year=='2015'&between(month,4,11))  %>%
 df_16 <- df %>% dplyr::filter(year=='2016'&between(month,4,11))  %>%
   group_by(month)%>%
   filter(yday==max(yday))
+
 ```
 
 Model for each month of a year.
 2012
 ```{r}
+w <- 1 # sum raster counter
+sum_rasters <- list()
 months <- df_12$month %>% unique()
 
 m_list <- list()
-c = 1
+c = 1 # m counter
 for(month in months){
   df_month <- df_12 %>% dplyr::filter(month== !!month)
-  m_list[[c]] <- gam(gdd10~s(dem700m,k=30,bs='cr')+s(cp700m,k=5,bs='cr')+s(east700m,north700m,k=20),data=df_month,method='REML',family=gaussian())
+  m_list[[c]] <- gam(gdd10~s(dem500m)+s(cp500m)+s(east500m,north500m),data=df_month,method='REML',family=gaussian())
   c <- c+1
 
 }
 gam_rasters <- list()
-j <- 1
+j <- 1 
 for(m in m_list){
   gam_rasters[[j]] <- raster::predict(rasters_brick2,m)
   plot(gam_rasters[[j]], main=m$formula, col=rev(rainbow(100)[1:70]))
@@ -112,11 +115,17 @@ for(m in m_list){
   par(mfrow=c(2,2))
   plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
   par(mfrow=c(1,1))
+  
+  writeRaster(gam_rasters[[j]],paste0('F:\\output\\500\\monthly\\','gdd10_2012_',j+3,'_30.tif'),
+              overwrite=TRUE)
   j <- j + 1
 }
 sum_raster_brick <- brick(gam_rasters)
-sum_raster <- raster::calc(sum_raster_brick, sum)
-plot(sum_raster, main=m$formula, col=rev(rainbow(100)[1:70]))
+sum_rasters[[w]] <- raster::calc(sum_raster_brick, sum)
+plot(sum_rasters[[w]], main=m$formula, col=rev(rainbow(100)[1:70]))
+w <- w +1
+writeRaster(sum_rasters[[1]],paste0('F:\\output\\500\\monthly\\gdd10_2012_sum.tif'),
+              overwrite=TRUE)
 ```
 
 2013
@@ -127,7 +136,7 @@ m_list <- list()
 c = 1
 for(month in months){
   df_month <- df_13 %>% dplyr::filter(month== !!month)
-  m_list[[c]] <- gam(gdd10~s(dem700m,k=30,bs='cr')+s(cp700m,k=5,bs='cr')+s(east700m,north700m,k=20),data=df_month,method='REML',family=gaussian())
+  m_list[[c]] <- gam(gdd10~s(dem500m,k=30,bs='cr')+s(cp500m,k=5,bs='cr')+s(east500m,north500m,k=20),data=df_month,method='REML',family=gaussian())
   c <- c+1
 
 }
@@ -143,8 +152,9 @@ for(m in m_list){
   j <- j + 1
 }
 sum_raster_brick <- brick(gam_rasters)
-sum_raster <- raster::calc(sum_raster_brick, sum)
-plot(sum_raster, main=m$formula, col=rev(rainbow(100)[1:70]))
+sum_rasters[[w]] <- raster::calc(sum_raster_brick, sum)
+plot(sum_rasters[[w]], main=m$formula, col=rev(rainbow(100)[1:70]))
+w <- w+1
 ```
 
 2014
@@ -155,7 +165,7 @@ m_list <- list()
 c = 1
 for(month in months){
   df_month <- df_14 %>% dplyr::filter(month== !!month)
-  m_list[[c]] <- gam(gdd10~s(dem700m,k=30,bs='cr')+s(cp700m,k=5,bs='cr')+s(east700m,north700m,k=20),data=df_month,method='REML',family=gaussian())
+  m_list[[c]] <- gam(gdd10~s(dem500m,k=30,bs='cr')+s(cp500m,k=5,bs='cr')+s(east500m,north500m,k=20),data=df_month,method='REML',family=gaussian())
   c <- c+1
 
 }
@@ -171,8 +181,9 @@ for(m in m_list){
   j <- j + 1
 }
 sum_raster_brick <- brick(gam_rasters)
-sum_raster <- raster::calc(sum_raster_brick, sum)
-plot(sum_raster, main=m$formula, col=rev(rainbow(100)[1:70]))
+sum_rasters[[w]] <- raster::calc(sum_raster_brick, sum)
+plot(sum_rasters[[w]], main=m$formula, col=rev(rainbow(100)[1:70]))
+w <- w+1
 ```
 
 2015
@@ -183,7 +194,7 @@ m_list <- list()
 c = 1
 for(month in months){
   df_month <- df_15 %>% dplyr::filter(month== !!month)
-  m_list[[c]] <- gam(gdd10~s(dem700m,k=30,bs='cr')+s(cp700m,k=5,bs='cr')+s(east700m,north700m,k=20),data=df_month,method='REML',family=gaussian())
+  m_list[[c]] <- gam(gdd10~s(dem500m,k=30,bs='cr')+s(cp500m,k=5,bs='cr')+s(east500m,north500m,k=20),data=df_month,method='REML',family=gaussian())
   c <- c+1
 
 }
@@ -199,8 +210,9 @@ for(m in m_list){
   j <- j + 1
 }
 sum_raster_brick <- brick(gam_rasters)
-sum_raster <- raster::calc(sum_raster_brick, sum)
-plot(sum_raster, main=m$formula, col=rev(rainbow(100)[1:70]))
+sum_rasters[[w]] <- raster::calc(sum_raster_brick, sum)
+plot(sum_rasters[[w]], main=m$formula, col=rev(rainbow(100)[1:70]))
+w <- w+1
 ```
 
 2016
@@ -211,7 +223,7 @@ m_list <- list()
 c = 1
 for(month in months){
   df_month <- df_16 %>% dplyr::filter(month== !!month)
-  m_list[[c]] <- gam(gdd10~s(dem700m,k=30,bs='cr')+s(cp700m,k=5,bs='cr')+s(east700m,north700m,k=20),data=df_month,method='REML',family=gaussian())
+  m_list[[c]] <- gam(gdd10~s(dem500m,k=30,bs='cr')+s(cp500m,k=5,bs='cr')+s(east500m,north500m,k=20),data=df_month,method='REML',family=gaussian())
   c <- c+1
 
 }
@@ -228,9 +240,59 @@ for(m in m_list){
   j <- j + 1
 }
 sum_raster_brick <- brick(gam_rasters)
-sum_raster <- raster::calc(sum_raster_brick, sum)
-plot(sum_raster, main=m$formula, col=rev(rainbow(100)[1:70]))
+sum_rasters[[w]] <- raster::calc(sum_raster_brick, sum)
+plot(sum_rasters[[w]], main=m$formula, col=rev(rainbow(100)[1:70]))
+w <- w+1 
 ```
 
 
+Five year average
+```{r}
+avg_brick <- brick(sum_rasters)
+avg_raster <- calc(avg_brick, mean)
+plot(avg_raster, main=m$formula, col=rev(rainbow(100)[1:70]))
+```
 
+
+Accumulated over the months
+```{r}
+out_folder <- 'f:\\output\\500\\monthly_acc\\'
+for(i in seq(4,11,1)){
+  month_df <- df %>% 
+    filter(year==2012 & month== i) %>%
+    group_by(stationid) %>%
+    filter(yday == max(yday)) %>%
+    ungroup()
+out_var <- 'gdd10_acc'
+resolution = '500m'
+year = 12
+name = paste(out_var,year,i,resolution,sep='_')
+m<- gam(gdd10_acc~s(dem)+s(cp)+s(east,north),data=month_df,method='REML')  
+gam_raster <- predict(rasters_brick, m)
+ writeRaster(gam_raster,paste0(out_folder,name,'.tif'), overwrite=TRUE)
+
+}
+
+```
+
+each month
+```{r}
+out_folder <- 'f:\\output\\500\\monthly\\'
+for(i in seq(4,11,1)){
+  month_df <- df %>% 
+    filter(year==2012 & month== i) %>%
+    group_by(stationid) %>%
+    mutate(gdd10_month = sum(gdd10_daily))%>%
+    filter(yday == max(yday)) %>%
+    ungroup()
+out_var <- 'gdd10_month'
+resolution = '500m'
+year = 12
+name = paste(out_var,year,i,resolution,sep='_')
+m<- gam(gdd10_month~s(dem)+s(cp)+s(east,north),data=month_df,method='REML')  
+gam_raster <- predict(rasters_brick, m)
+ writeRaster(gam_raster,paste0(out_folder,name,'_2.tif'), overwrite=TRUE)
+
+}
+
+```

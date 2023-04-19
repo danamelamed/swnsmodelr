@@ -14,7 +14,6 @@ Depends: R (>= 3.4.1),
     reshape2,
     magrittr,
     modelr,
-    randomcoloR,
     ggplot2,
     rgdal
 License: What license is it under?

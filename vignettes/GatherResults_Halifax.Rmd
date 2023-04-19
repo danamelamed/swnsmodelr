@@ -1,0 +1,326 @@
+---
+title: "Gather Results"
+author: "Dana Melamed"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+Checkout modelling results for the entire growing season period of 2012.
+Then, apply the model to other years, and calculate a 5 year average.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.align = 'center')
+knitr::opts_chunk$set(fig.width = 9)
+knitr::opts_chunk$set(fig.height = 7)
+library(swnsmodelr)
+par(mfrow=c(2,2))
+```
+
+## Model temperature with each input variable individually
+
+```{r}
+# Prepare the data
+# Make a list of input rasters
+in_folder <- 'f:\\data\\rasters\\input_rasters\\'
+resolution <- 500
+var_names <- list('dem','cp','east','north','tpi5000m',
+                     'asp','slp')
+ext = '.tif'
+rasters_list <- lapply(X=paste0(in_folder,var_names,resolution,'m',ext),FUN=raster::raster)
+
+# cp to the proper extent
+cp <- rasters_list[[2]]
+rasters_list[[2]] <- raster::resample(cp,rasters_list[[1]]) 
+
+# brick rasters
+rasters_brick <- raster::brick(rasters_list)
+
+
+# transform
+rasters_brick[[2]]<-rasters_brick[[2]]^0.5
+rasters_brick[[6]] <- rasters_brick[[7]]*cos(rasters_brick[[6]])
+
+# names
+names(rasters_brick) <- var_names
+
+# extract rasters to dataframe
+df_in <- stations_df %>% 
+  extract_constant_raster_values(var_names,rasters_brick) %>% add_date_columns()
+```
+
+
+Create dataframe for each year
+```{r}
+
+# calculate gdd10 in dataframe
+df <- df_in %>%
+  dplyr::filter(stationid %in% nscc_stations_list|
+ #                 stationid == '47187' | # halifax
+                  stationid == '6354' 
+         )%>%
+  dplyr::filter(stationid!='S100') %>% # 2012
+  dplyr::filter(stationid!='S160') %>% # 2012, early in season/cold
+  dplyr::filter(stationid!='S20')  %>% #2012
+  dplyr::filter(stationid != 'S60') %>% #2012
+  dplyr::filter(stationid != 'S80') %>% #2012
+  dplyr::filter(stationid != 'CL1') %>%
+  filter(between(year(date_time),2012,2016))
+modelling_stations <- df %>% filter(date_time == ymd('2012-06-01'))
+coordinates(modelling_stations) <- ~ EASTING+NORTHING
+
+
+df_12 <- df %>% dplyr::filter(year=='2012'&between(month,4,11)) %>%
+  group_by(stationid)%>%
+  dplyr::filter(date_time == max(date_time))
+
+df_13 <- df %>% dplyr::filter(year=='2013'&between(month,4,11)) %>%
+  group_by(stationid)%>%
+  dplyr::filter(date_time == max(date_time))
+
+df_14 <- df %>% dplyr::filter(year=='2014'&between(month,4,11)) %>%
+  group_by(stationid)%>%
+  dplyr::filter(date_time == max(date_time))
+
+df_15 <- df %>% dplyr::filter(year=='2015'&between(month,4,11)) %>%
+  group_by(stationid)%>%
+  dplyr::filter(date_time == max(date_time))
+
+df_16 <- df %>% dplyr::filter(year=='2016'&between(month,4,11)) %>%
+  group_by(stationid)%>%
+  dplyr::filter(date_time == max(date_time))
+  
+```
+
+### Position: East, North, (East,North), and Coastal Proximity
+
+```{r}
+m_list <- list()
+m_list[[1]]<- gam(gdd10~s(east),data=df_12,method='REML')
+m_list[[2]]<- gam(gdd10~s(north),data=df_12,method='REML')
+m_list[[3]]<- gam(gdd10~s(east)+s(north),data=df_12,method='REML')
+m_list[[4]]<- gam(gdd10~s(east,north),data=df_12,method='REML')
+m_list[[5]]<- gam(gdd10~s(cp),data=df_12)
+m_list[[6]]<- gam(gdd10~s(east,north,k=10),data=df_12,method='REML')
+
+for(m in m_list){
+  gam_raster <- raster::predict(rasters_brick,m)
+  plot(gam_raster, main=paste0('2012: ',paste(deparse(m$formula),collapse='')), col=rev(rainbow(50)[1:42]),      breaks = c(gam_raster@data@min,seq(1000,1200,by=5),gam_raster@data@max))
+  points(modelling_stations)
+  par(mfrow=c(2,2),mar=c(5,6,2,2)+0.1)
+  plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+}
+
+```
+
+### Land Surface: DEM, Slope, Aspect (Guan et al., 2013), TPI5000m
+
+```{r}
+m_list <- list()
+m_list[[1]]<- gam(gdd10~s(dem),data=df_12,method='REML')
+m_list[[2]]<- gam(gdd10~s(asp),data=df_12,method='REML')
+m_list[[3]]<- gam(gdd10~s(slp),data=df_12,method='REML')
+m_list[[4]]<- gam(gdd10~s(tpi5000m),data=df_12,method='REML')
+for(m in m_list){
+  gam_raster <- raster::predict(rasters_brick,m)
+  plot(gam_raster, main=paste0('2012: ',paste(deparse(m$formula),collapse='')), col=rev(rainbow(50)[1:42]),      breaks = c(gam_raster@data@min,seq(1000,1200,by=5),gam_raster@data@max))
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+}
+```
+
+## Combine Variables
+
+Above, it seems the reasonable rasters to model with are (East,North), Coastal Proximity, DEM
+
+### (East,North) + (x)
+
+```{r}
+m_list <- list()
+m_list[[1]] <- gam(gdd10~s(east,north) +s(cp),data=df_12,method='REML')
+m_list[[2]] <- gam(gdd10~s(east,north)+ s(dem),data=df_12,method='REML')
+
+for(m in m_list){
+  
+  gam_raster <- raster::predict(rasters_brick,m)
+  plot(gam_raster, main=paste0('2012: ',paste(deparse(m$formula),collapse='')), col=rev(rainbow(50)[1:42]),      breaks = c(gam_raster@data@min,seq(1000,1200,by=5),gam_raster@data@max))
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+}
+```
+
+### te(DEM, cp) \| s(dem) + s(cp)
+
+```{r}
+m_list <- list()
+m_list[[1]] <- gam(gdd10~s(dem)+s(cp),data=df_12,method='REML')
+m_list[[2]] <- gam(gdd10~te(dem,cp),data=df_12,method='REML')
+
+for(m in m_list){
+  gam_raster <- raster::predict(rasters_brick,m)
+  plot(gam_raster, main=paste0('2012: ',paste(deparse(m$formula),collapse='')), col=rev(rainbow(50)[1:42]),      breaks = c(gam_raster@data@min,seq(1000,1200,by=5),gam_raster@data@max))
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE,     pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+}
+```
+
+### Combine... s(east,north) + s(dem,cp)|s(dem) +s(cp)
+
+```{r}
+m_list <- list()
+m_list[[1]] <- gam(gdd10~te(dem,cp)+s(east,north),data=df_12,method='REML')
+m_list[[2]] <- gam(gdd10~s(dem)+s(cp)+s(east,north),data=df_12,method='REML')
+
+for(m in m_list){
+  
+  gam_raster <- raster::predict(rasters_brick,m)
+  plot(gam_raster, main=paste0('2012: ',paste(deparse(m$formula),collapse='')), col=rev(rainbow(50)[1:42]),      breaks = c(gam_raster@data@min,seq(1000,1200,by=5),gam_raster@data@max))
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE,  pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+}
+```
+
+
+
+### Knots
+Define knots so that wiggliness is increased
+```{r}
+m_list <- list()
+m_list[[1]] <- gam(gdd10~te(dem,cp,k=5)+s(east,north,k=10),data=df_12,method='REML')
+m_list[[2]] <- gam(gdd10~s(dem,k=30,bs='cr')+s(cp,k=5,bs='cr')+s(east,north,k=20),data=df_12,method='REML',family=gaussian())
+
+m<-gam(gdd10~s(cp),data=df_12)
+for(m in m_list){
+  
+  gam_raster <- raster::predict(rasters_brick,m)
+  plot(gam_raster, main=paste0('2012: ',paste(deparse(m$formula),collapse='')), col=rev(rainbow(50)[1:42]),      breaks = c(gam_raster@data@min,seq(1000,1200,by=5),gam_raster@data@max))
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+}
+```
+
+Other years
+```{r}
+m_list <- list()
+m_list[[1]] <- gam(gdd10~s(dem,k=30,bs='cr')+s(cp,k=5,bs='cr')+s(east,north,k=20),data=df_13,method='REML',family=gaussian())
+
+m_list[[2]] <- gam(gdd10~s(dem,k=30,bs='cr')+s(cp,k=5,bs='cr')+s(east,north,k=20),data=df_14,method='REML',family=gaussian())
+
+m_list[[3]] <- gam(gdd10~s(dem,k=30,bs='cr')+s(cp,k=5,bs='cr')+s(east,north,k=20),data=df_15,method='REML',family=gaussian())
+
+m_list[[4]] <- gam(gdd10~s(dem,k=30,bs='cr')+s(cp,k=5,bs='cr')+s(east,north,k=20),data=df_16,method='REML',family=gaussian())
+
+
+gam_rasters <- list()
+c <- 1
+y <- 2013
+for(m in m_list){
+  gam_rasters[[c]] <- raster::predict(rasters_brick,m)
+  plot(gam_rasters[[c]], main=paste0('2012: ',paste(deparse(m$formula),collapse='')), col=rev(rainbow(50)[1:42]),      breaks = c(gam_raster@data@min,seq(1000,1200,by=5),gam_raster@data@max))
+  points(modelling_stations)
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+  c <- c + 1
+  y <- y + 1
+}
+```
+
+## Five Year Average
+From averaging each annual raster
+```{r}
+avg_brick <- brick(gam_rasters)
+avg_raster <- calc(avg_brick, mean)
+plot(avg_raster, main=paste0('2012: ',paste(deparse(m$formula),collapse='')), col=rev(rainbow(50)[1:42]),      breaks = c(gam_raster@data@min,seq(1000,1200,by=5),gam_raster@data@max))
+```
+
+From modelling with gdd10 averaged from five years
+```{r}
+avg_df <- df %>%
+  filter(between(year(date_time),2012,2016)&
+           month(date_time)==11 & 
+           day(date_time)==30) %>%
+  group_by(stationid) %>%
+  mutate(gdd10_5ya = round(mean(gdd10),0)) %>%
+  ungroup()
+```
+
+```{r}
+
+m <- gam(gdd10_5ya~s(dem,k=30,bs='cr')+s(cp,k=5,bs='cr')+s(east,north,k=20),data=avg_df,method='REML',family=gaussian())
+
+
+
+gam_raster <- raster::predict(rasters_brick,m)
+plot(gam_raster, main=paste0('2012: ',paste(deparse(m$formula),collapse='')), col=rev(rainbow(50)[1:42]),      breaks = c(gam_raster@data@min,seq(1000,1200,by=5),gam_raster@data@max))
+points(modelling_stations)
+par(mfrow=c(2,2))
+plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+par(mfrow=c(1,1))
+
+
+```
+
+Crop to stations-only extent
+```{r}
+crop_raster <- raster('f:\\data\\rasters\\input_rasters_b\\dem500m.tif')
+```
+Other years
+```{r}
+m_list <- list()
+m_list[[1]] <- gam(gdd10~s(dem,k=30,bs='cr')+s(cp,k=5,bs='cr')+s(east,north,k=20),data=df_13,method='REML',family=gaussian())
+
+m_list[[2]] <- gam(gdd10~s(dem,k=30,bs='cr')+s(cp,k=5,bs='cr')+s(east,north,k=20),data=df_14,method='REML',family=gaussian())
+
+m_list[[3]] <- gam(gdd10~s(dem,k=30,bs='cr')+s(cp,k=5,bs='cr')+s(east,north,k=20),data=df_15,method='REML',family=gaussian())
+
+m_list[[4]] <- gam(gdd10~s(dem,k=30,bs='cr')+s(cp,k=5,bs='cr')+s(east,north,k=20),data=df_16,method='REML',family=gaussian())
+
+
+gam_rasters <- list()
+c <- 1
+y <- 2013
+for(m in m_list){
+  print(paste0('Year: ',y))
+  gam_raster <- raster::predict(rasters_brick,m)
+  gam_rasters[[c]] <- raster::resample(gam_raster,crop_raster)
+  plot(gam_rasters[[c]],main=paste0(y,paste(deparse(m$formula),collapse='')), col=rev(rainbow(50)[1:42]),      breaks = c(gam_rasters[[c]]@data@min,seq(1000,1200,by=5),gam_rasters[[c]]@data@max))
+  points(modelling_stations)
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+  c <- c + 1
+  y <- y + 1
+}
+```
+
+## Five Year Average
+From averaging each annual raster
+```{r}
+avg_brick <- brick(gam_rasters)
+avg_raster <- calc(avg_brick, mean)
+avg_raster <- raster::crop(avg_raster,crop_raster)
+plot(avg_raster, main=paste0('Five Year Average: ',paste(deparse(m$formula),collapse='')), col=rev(rainbow(50)[1:42]),      breaks = c(gam_raster@data@min,seq(1000,1200,by=5),gam_raster@data@max))
+```
+
+```{r}
+
+m <- gam(gdd10_5ya~s(dem,k=5,bs='cr')+s(cp,k=5,bs='cr')+s(east,north,k=20),data=avg_df,method='REML',family=gaussian())
+
+
+gam_raster <- raster::predict(rasters_brick,m)
+gam_raster <- raster::crop(gam_raster,crop_raster)
+plot(gam_raster, main=paste0('Five Year Average: ',paste(deparse(m$formula),collapse='')), col=rev(rainbow(50)[1:42]),      breaks = c(gam_raster@data@min,seq(1000,1200,by=5),gam_raster@data@max))
+points(modelling_stations)
+par(mfrow=c(2,2))
+plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+par(mfrow=c(1,1))
+
+
+```

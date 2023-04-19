@@ -19,46 +19,67 @@ knitr::opts_chunk$set(eval = FALSE)
 
 ```{r warning=FALSE, message = FALSE, echo = FALSE}
 # get evi values
-# Make table of EVI rasters
-evi_raster_df <- make_temporal_raster_df(file.path("E:","EVI_200m"),
+# Make raster df tables
+evi_raster_df <- make_temporal_raster_df(file.path("C:",'MScAG',"EVI_200m"),
                                          start_date = ymd('2012-04-01'),
-                                         end_date = ymd('2017-11-30'),
+                                         end_date = ymd('2012-11-30'),
                                          date_chars = c(5,-4),
                                          date_format = "%Y_%j") %>%
                 add_date_columns() %>%
                 filter(month >= 4 & month <= 11)
 
+
+gdd_raster_df <- make_temporal_raster_df(file.path("F:","output",'gdd10','monthly'),
+                                         start_date = ymd('2012-04-01'),
+                                         end_date   = ymd('2012-11-30'),
+                                         date_chars = c(7,-5),
+                                         date_format = "%Y_%m_%d")
+
+```
+
+
+For each monthly gdd raster... plot the corresponding EVI raster
+```{r}
+
+for(i in seq_along(gdd_raster_df[[1]])){
+  gdd_raster_row <- filter(gdd_raster_df,date_time == gdd_raster_df[[2]][[i]])
+  gdd_raster <- raster(gdd_raster_row[[1]])
+  evi_raster_row <- filter(evi_raster_df,date_time == evi_raster_df[[2]][[i]])
+  evi_raster <- raster(evi_raster_row[[1]])
+  plot(evi_raster)
+  plot(gdd_raster)
+}
+```
+
+
+```{r}
 evi_df <- extract_temporal_raster_values(evi_raster_df,
-                                         swns_stations_df,
+                                         df_12,
                                          col_name = "evi",
-                                         verbose = FALSE) %>% 
+                                         verbose = TRUE) %>% 
           dplyr::select(stationid, EASTING, NORTHING, date_time, evi) %>%
           filter(date_time %in% evi_raster_df$date_time) %>%
           mutate(evi_calib = (evi + 2000)/12000*1000)
 ```
 
 
+
 ```{r warning = FALSE, message = FALSE, echo = FALSE}
 # add gdd values
-gdd_raster_df <- make_temporal_raster_df(file.path("E:","Daily","GDD0_16_day"),
-                                         start_date = ymd('2012-04-01'),
-                                         end_date   = ymd('2017_11_30'),
-                                         date_chars = c(9,-4),
-                                         date_format = "%Y-%m-%d")
+
 
 gdd_evi_df <- extract_temporal_raster_values(gdd_raster_df,
                                          evi_df,
                                          col_name = "gdd",
-                                         verbose = FALSE)
+                                         verbose = TRUE)
 ```
 
 
 Add GDD zone values
 ```{r warning = FALSE, echo = FALSE}
-gdd_zones <- raster(file.path("E:","Daily","gdd_zones.tif"))
-
-gdd_evi_df <- extract_constant_raster_values(gdd_evi_df, list(gdd_zones)) %>%
-              add_date_columns()
+gdd_zones <- raster(file.path("F:","data","rasters","swns_ecodist.tif"))
+names(gdd_zones) <- 'gdd_zones'
+gdd_evi_df <- extract_constant_raster_values(gdd_evi_df, gdd_zones)
 ```
 
 
@@ -68,14 +89,12 @@ gdd_evi_df <- extract_constant_raster_values(gdd_evi_df, list(gdd_zones)) %>%
 ### Model Stations
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width = 8, fig.height = 5, fig.hold= TRUE}
-# Filter to zone 1, model stations
 
-
-gdd_zones_list <- list(1,2,3,4,5)
+gdd_zones_list <- gdd_zones %>% unique()
 for(j in seq_along(gdd_zones_list)){
    gdd_zone_now <- gdd_zones_list[[j]]  
     gdd_evi_df_now <- gdd_evi_df %>% 
-                  filter(gdd_zones == gdd_zone_now & stationid %in% model_stations_list)
+                  filter(gdd_zones == gdd_zone_now)
     
     stations_list <- gdd_evi_df_now %>% 
                  filter(!duplicated(stationid)) %>%
@@ -90,8 +109,7 @@ for(j in seq_along(gdd_zones_list)){
     for(i in seq_along(stations_list)){
           print('')
           gdd_evi_df_now <- gdd_evi_df %>% 
-                            filter(gdd_zones == gdd_zone_now & 
-                                     stationid %in% model_stations_list)
+                            filter(gdd_zones == gdd_zone_now)
           gdd_evi_df_now <- gdd_evi_df_now %>% filter(stationid == stations_list[[i]])
 
           if(length(gdd_evi_df_now[[1]] != 0)){

@@ -1,0 +1,91 @@
+---
+title: "Validation"
+author: "Dana Melamed"
+date: "`r Sys.Date()`"
+output: word_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.align = 'center')
+knitr::opts_chunk$set(fig.width = 9)
+knitr::opts_chunk$set(fig.height = 7)
+library(swnsmodelr)
+par(mfrow=c(2,2))
+```
+
+Define Validation Stations as a List
+```{r}
+# Prepare the data
+# Make a list of input rasters
+
+model_stations_list <- c(nscc_stations_list,'6354','47187')
+
+# validation stations df & sp
+validation_stations_df <- stations_df %>% filter(!(stationid %in% model_stations_list)) %>%
+  filter(date_time == max(date_time))
+  
+
+write.csv(df_test,'f:\\data\\validation7.csv')
+
+```
+
+Extract outputs to validation stations
+```{r}
+v_stations <- read.csv('f:\\data\\validation_stations_edit.csv')
+v_stations <- v_stations %>% mutate(stationid = as.character(stationid)) %>% filter(year(date_time)=='2012') %>%
+  group_by(stationid) %>%
+  filter(date_time == max(date_time)) %>%
+  ungroup()
+file_list <- list.files('f:\\output\\500\\apr_nov\\',full.names=TRUE)
+gdd10_rasters <- list()
+c <- 1
+for(file in file_list){
+  if(substring(file,nchar(file)-3,nchar(file))=='.tif'){
+    gdd10_rasters[[c]] <- raster(file)
+    c <- c+1
+  }
+}
+brick <- brick(gdd10_rasters)
+v_stations <- v_stations %>% extract_constant_raster_values(brick)
+write.csv(v_stations,'f:\\data\\validation_stations_edit_extract.csv')
+```
+
+
+I downloaded all the stations in swns from climatedata.ca (apr 2012 - nov 2016)
+```{r}
+in_v_df <- read.csv('f:\\data\\climate_daily_edit.csv') %>%
+  dplyr::select(STATION_NA,
+                stationid=CLIMATE_ID,
+                date_time=LOCAL_DATE,
+                temp_mean=MEAN_TEMPE,
+                EASTING,
+                NORTHING)
+
+v_df <- in_v_df %>% mutate(date_time=ymd(substring(date_time,1,10)))%>%
+  mutate(gdd10_daily = (ifelse(temp_mean>10,temp_mean-10,0))) %>%
+  filter(between(month(date_time),4,11)) %>%
+  group_by(stationid,year(date_time)) %>%
+  mutate(gdd10_daily = ifelse(is.na(gdd10_daily),0,gdd10_daily)) %>%
+  mutate(gdd10 = sum(round(gdd10_daily),0,na.rm=TRUE)) %>%
+  mutate(date_time = as.Date(date_time)) %>%
+  ungroup()%>%
+  dplyr::select(-'year(date_time)')
+
+v_stations <- v_df %>% mutate(stationid = as.character(stationid)) %>% filter(year(date_time)=='2012') %>%
+  group_by(stationid) %>%
+  filter(date_time == max(date_time)) %>%
+  ungroup()
+
+file_list <- list.files('f:\\output\\500\\apr_nov\\',full.names=TRUE)
+gdd10_rasters <- list()
+c <- 1
+for(file in file_list){
+  if(substring(file,nchar(file)-3,nchar(file))=='.tif'){
+    gdd10_rasters[[c]] <- raster(file)
+    c <- c+1
+  }
+}
+brick <- brick(gdd10_rasters)
+v_stations <- v_stations %>% extract_constant_raster_values(brick)
+
+```

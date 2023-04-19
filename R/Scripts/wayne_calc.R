@@ -5,9 +5,8 @@ daily_df <- daily_df_in %>% filter(year(date_time) == 2012) %>%
   filter(between(month(date_time),4,11)) %>%
   mutate(temp_mean2 = (temp_min + temp_max)/2) %>%
   mutate(gdd10_daily = ifelse(temp_mean2>10,temp_mean2-10,0)) %>%
-  mutate(gdd10_daily_round= round(gdd10_daily,0)) %>%
   group_by(stationid) %>%
-  mutate(gdd10an = sum(gdd10_daily_round)) %>%
+  mutate(gdd10an = sum(round(gdd10_daily,0))) %>%
   filter(date_time == max(date_time))# %>%
  # select(date_time,stationid,gdd10an_total, gdd10an, gdd10, gdd10_daily)
 

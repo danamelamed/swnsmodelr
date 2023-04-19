@@ -1,0 +1,102 @@
+---
+title: "Data Preparation"
+author: "Dana Melamed"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(eval = FALSE)
+library(swnsmodelr)
+```
+### Stations Spatial Object
+
+```{r}
+stations_info_df <- read.csv('f:\\WeatherData\\NSWeatherStns.csv')
+stations_info_df <- stations_info_df %>% dplyr::select(stationid = StnID,
+                                                       NORTHING = Northing, 
+                                                       EASTING = Easting,
+                                                       type = StnType) %>%
+                   filter(EASTING < 4000000)
+
+
+temperatures_df <- read.csv('f:\\WeatherData\\daily_20110101_20180218.csv')
+temperatures_df <- temperatures_df %>% dplyr::select(date_time,
+                                                 stationid,
+                                                 temp_min,
+                                                 temp_max)
+
+
+
+# coordinates(stations_sp) = ~ EASTING + NORTHING
+# plot(stations_sp)
+
+
+join_df <- dplyr::right_join(temperatures_df,
+                                stations_info_df,
+                                by = 'stationid') %>%
+  filter(!is.na(EASTING))
+
+# Calculate daily mean temperature, GDD10, and total GDD10 (Apr-Nov)
+stations_df <- join_df %>%
+  mutate(temp_mean = (temp_min + temp_max)/2) %>%
+  mutate(gdd10_daily = (ifelse(temp_mean>10,temp_mean-10,0))) %>%
+  mutate(gdd5_daily = (ifelse(temp_mean>5,temp_mean-5,0))) %>%
+  mutate(gdd0_daily = (ifelse(temp_mean>0,temp_mean-0,0))) %>%
+  
+  
+  filter(between(month(date_time),4,11)) %>% 
+  filter(stationid!='S40')%>%
+  
+  group_by(stationid,year(date_time)) %>%
+  
+  mutate(gdd10_daily = ifelse(is.na(gdd10_daily),0,gdd10_daily)) %>%
+  mutate(gdd10 = sum(round(gdd10_daily),0,na.rm=TRUE)) %>%
+  mutate(gdd10_acc = cumsum(round(gdd10_daily))) %>%
+
+  mutate(gdd5_daily = ifelse(is.na(gdd5_daily),0,gdd5_daily)) %>%
+  mutate(gdd5 = sum(round(gdd5_daily),0,na.rm=TRUE)) %>%
+  mutate(gdd5_acc = cumsum(round(gdd5_daily))) %>%
+  
+  mutate(gdd0_daily = ifelse(is.na(gdd0_daily),0,gdd0_daily)) %>%
+  mutate(gdd0 = sum(round(gdd0_daily),0,na.rm=TRUE)) %>%
+  mutate(gdd0_acc = cumsum(round(gdd0_daily)))%>%
+
+
+  mutate(date_time = as.Date(date_time)) %>%
+  group_by(month(datetime)) %>%
+  mutate(sum(round(gdd10_monthly),na.rm=TRUE))
+  ungroup()%>%
+  
+  dplyr::select(-'year(date_time)')
+  
+# use only swns stations
+swns_raster <- raster('f:\\data\\swns.tif')
+
+stations_swns_df <- stations_df%>%
+  extract_constant_raster_values(brick(swns_raster))
+
+stations_df <- stations_swns_df %>%
+filter(!(is.na(swns)) | (stationid %in% list('10859','31829','43406')))
+
+stations_sp <- stations_df %>% filter(date_time==max(date_time))
+coordinates(stations_sp) = ~ EASTING + NORTHING
+#usethis::use_data(stations_sp,overwrite=TRUE)
+#usethis::use_data(stations_df,overwrite=TRUE)
+```
+model & validation stations
+```{r}
+model_stations <- stations_df %>% 
+  filter(stationid %in% c(nscc_stations_list,'6354','47187'))
+model_stations_sp <- model_stations %>% filter(date_time == max(date_time))
+coordinates(model_stations_sp) <- ~ EASTING + NORTHING
+model_stations_list <- model_stations$stationid %>% unique()
+validation_stations <- stations_df %>%
+  filter(!(stationid %in% model_stations_list))
+validation_stations_sp <- validation_stations %>% filter(date_time == max(date_time))
+coordinates(validation_stations_sp) <- ~ EASTING + NORTHING
+
+#  write.csv(validation_stations,'f:\\data\\validation_stations.csv')
+```
+

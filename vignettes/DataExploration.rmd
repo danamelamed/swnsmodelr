@@ -16,7 +16,39 @@ library(knitr)
 ```
 
 ## The Temperature Data
-The temperature data is a dataframe of daily temperature readings at stations in South-West Nova Scotia. The fields are the date (`date_time`), the station location (`EASTINGS` and `NORTHINGS`), and temperature minimum and maximum (`temp_min` and `temp_max`, respectively).
+The temperature data is a dataframe of daily temperature readings at stations in South-West Nova Scotia. The fields are the date (`date_time`), the station location (`EASTING` and `NORTHING`), and temperature minimum and maximum (`temp_min` and `temp_max`, respectively).
+
+```{r}
+temperatures_df <- read.csv('f:\\WeatherData\\daily_20110101_20180218.csv')
+temperatures_df <- temperatures_df %>% dplyr::select(date_time,
+                                                 stationid,
+                                                 temp_min,
+                                                 temp_max)
+
+stations_info_df <- read.csv('f:\\WeatherData\\NSWeatherStns.csv')
+stations_info_df <- stations_info_df %>% dplyr::select(stationid = StnID,
+                                                       NORTHING = Northing, 
+                                                       EASTING = Easting,
+                                                       type = StnType)
+stations_df <- dplyr::left_join(temperatures_df,
+                                stations_info_df,
+                                by = 'stationid') %>%
+  filter(!is.na(EASTING))
+
+# Calculate daily mean temperature, GDD10, and total GDD10 (Apr-Nov)
+stations_df <- stations_df %>%
+  mutate(temp_mean = (temp_min + temp_max)/2) %>%
+  mutate(gdd10_daily = (ifelse(temp_mean>10,temp_mean-10,0))) %>%
+  filter(between(month(date_time),4,11)) %>% 
+  filter(stationid!='S40')%>%
+  group_by(stationid,year(date_time)) %>%
+  mutate(gdd10 = sum(round(gdd10_daily),0)) %>%
+  #mutate(gdd10 = sum(gdd10_daily)) %>%
+  ungroup()
+  
+
+usethis::use_data(stations_df,overwrite=TRUE)
+```
 
 Find missing data 
 ```{r}
@@ -71,14 +103,6 @@ stations_df <- extract_constant_raster_values(stations_df,
 
 
 ```  
-
-Calculate daily temperature means
-```{r}
-stations_df <- stations_df %>% 
-  mutate(temp_mean = (temp_min + temp_max)/2) 
-  
-```
-
 
 
 Created a melted dataframe for exploratory analysis

@@ -8,15 +8,16 @@
 #' @return input temperatures_df with added columns, one for each raster in rasters_list
 #' @export
 extract_constant_raster_values <- function(temperatures_df,
-                                           rasters_list){
+                                           rasters_brick){
   stations <- temperatures_df %>% 
     filter(!duplicated(stationid)) %>%
     dplyr::select(stationid, EASTING, NORTHING)
   coordinates(stations) = ~ EASTING + NORTHING
   
+  var_names <- rasters_brick %>% names()
   # Loop through each raster in list
-  for(i in seq_along(rasters_list)){
-    raster <- rasters_list[[i]]
+  for(i in seq_along(var_names)){
+    raster <- rasters_brick[[i]]
     # Extract raster values to spatial points dataframe of SWNS stations
     stations$extract <-(raster::extract(x = raster,
                                            y = stations))

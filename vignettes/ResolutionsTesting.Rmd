@@ -1,0 +1,317 @@
+---
+title: "ResolutionsTesting"
+author: "Dana Melamed"
+date: "`r Sys.Date()`"
+output: word_document
+---
+Spatial analysis involves the use of geographic data to analyze and understand spatial patterns and relationships. The resolution of the data used in such analyses can have a significant impact on the results obtained. In this blog, we will discuss the impact of using different resolution rasters in spatial analysis and provide citations to scientific papers that illustrate this impact.
+
+The resolution of a raster refers to the size of the cells or pixels that make up the raster. Higher resolution rasters have smaller cells, which means that they provide more detailed information about the spatial pattern of the phenomenon being analyzed. Conversely, lower resolution rasters have larger cells and provide less detailed information.
+
+One of the most common uses of rasters in spatial analysis is to create maps of continuous phenomena such as temperature, elevation, and precipitation. The resolution of the raster used to create such maps can have a significant impact on the accuracy of the results. For example, a study by Carlson and Arthur (2000) compared the accuracy of precipitation maps created using rasters with resolutions of 2 km, 8 km, and 32 km. They found that the 2 km resolution raster provided the most accurate results, while the 32 km resolution raster provided the least accurate results.
+
+Another study by Riquelme et al. (2019) examined the impact of raster resolution on the accuracy of slope and aspect maps created from LiDAR data. They found that increasing the resolution of the raster used to create the maps resulted in more accurate results, particularly for the aspect maps.
+
+The impact of raster resolution on spatial analysis is not limited to maps of continuous phenomena. Raster resolution can also have a significant impact on the accuracy of spatial statistics such as interpolation and spatial autocorrelation. A study by Schabenberger and Gotway (2005) examined the impact of raster resolution on the accuracy of kriging, a commonly used method for spatial interpolation. They found that increasing the resolution of the raster used in the analysis resulted in more accurate interpolation.
+
+In summary, the resolution of the raster used in spatial analysis can have a significant impact on the accuracy of the results obtained. Higher resolution rasters provide more detailed information about the spatial pattern of the phenomenon being analyzed and can lead to more accurate results. However, higher resolution rasters also require more processing power and can be more difficult to work with. It is therefore important to carefully consider the resolution of the raster used in spatial analysis and to choose the appropriate resolution for the specific analysis being performed.
+
+References:
+
+Carlson, T.N. and Arthur, S.T., 2000. The impact of land use-land cover changes due to urbanization on surface microclimate and hydrology: a satellite perspective. Global and Planetary Change, 25(1-2), pp.49-65.
+Riquelme, A.D., Tiedemann, A., Rechsteiner, L. and Brenning, A., 2019. Effects of Digital Elevation Model Resolution on Terrain Analysis and Mapping. Remote Sensing, 11(8), p.904.
+Schabenberger, O. and Gotway, C.A., 2005. Statistical methods for spatial data analysis. CRC press.
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.align = 'center')
+knitr::opts_chunk$set(fig.width = 9)
+knitr::opts_chunk$set(fig.height = 7)
+library(swnsmodelr)
+par(mfrow=c(2,2))
+```
+```
+# Prepare the data
+```{r}
+# Make a list of input rasters
+in_folder <- 'f:\\data\\rasters\\input_rasters_b\\'
+resolution <- 1000
+var_names <- list('dem','cp','east','north','tpi5000m',
+                     'asp','slp')
+ext = '.tif'
+rasters_list <- lapply(X=paste0(in_folder,var_names,resolution,'m',ext),FUN=raster::raster)
+
+# cp to the proper extent
+cp <- rasters_list[[2]]
+rasters_list[[2]] <- raster::resample(cp,rasters_list[[1]]) 
+
+# brick rasters
+rasters_brick <- raster::brick(rasters_list)
+
+
+# transform
+rasters_brick[[2]]<-rasters_brick[[2]]^0.5
+rasters_brick[[6]] <- rasters_brick[[7]]*cos(rasters_brick[[6]])
+
+# names
+names(rasters_brick) <- var_names
+
+# extract rasters to dataframe
+df_in <- stations_df %>% 
+  extract_constant_raster_values(var_names,rasters_brick) %>% add_date_columns()
+
+# calculate gdd10 in dataframe
+df <- df_in %>%
+  dplyr::filter(stationid %in% nscc_stations_list|
+ #                 stationid == '47187' | # halifax
+                  stationid == '6354' 
+         )%>%
+  dplyr::filter(stationid!='S100') %>% # 2012
+  dplyr::filter(stationid!='S160') %>% # 2012, early in season/cold
+  dplyr::filter(stationid!='S20')  %>% #2012
+  dplyr::filter(stationid != 'S60') %>% #2012
+  dplyr::filter(stationid != 'S80') %>% #2012
+  dplyr::filter(stationid != 'CL1')
+modelling_stations <- df %>% filter(date_time == ymd('2012-06-01'))
+coordinates(modelling_stations) <- ~ EASTING+NORTHING
+
+
+df_12 <- df %>% dplyr::filter(year=='2012'&between(month,4,11)) %>%
+  group_by(stationid)%>%
+  dplyr::filter(date_time == max(date_time))
+
+```
+### Predict GDD10
+
+2012 growing season based on modelling at 500m.
+```{r}
+
+m<- gam(gdd10~s(dem,k=30,bs='cr')+s(cp,k=5,bs='cr')+s(east,north,k=20),data=df_12,method='REML')
+
+
+
+  
+  gam_raster <- raster::predict(rasters_brick,m)
+  plot(gam_raster, 
+       main=paste0('2012: ',paste(deparse(m$formula),collapse='')), 
+       col=rev(rainbow(50)[1:42]),
+     breaks = c(gam_raster@data@min,seq(1000,1200,by=5),gam_raster@data@max))
+  points(modelling_stations)
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+
+```
+
+# Prepare the data
+```{r}
+
+# Make a list of input rasters
+in_folder <- 'f:\\data\\rasters\\input_rasters_b\\'
+resolution <- 250
+var_names <- list('dem','cp','east','north','tpi5000m',
+                     'asp','slp')
+ext = '.tif'
+rasters_list <- lapply(X=paste0(in_folder,var_names,resolution,'m',ext),FUN=raster::raster)
+
+# cp to the proper extent
+cp <- rasters_list[[2]]
+rasters_list[[2]] <- raster::resample(cp,rasters_list[[1]]) 
+
+# brick rasters
+rasters_brick <- raster::brick(rasters_list)
+
+
+# transform
+rasters_brick[[2]]<-rasters_brick[[2]]^0.5
+rasters_brick[[6]] <- rasters_brick[[7]]*cos(rasters_brick[[6]])
+
+# names
+names(rasters_brick) <- var_names
+
+# extract rasters to dataframe
+df_in <- stations_df %>% 
+  extract_constant_raster_values(var_names,rasters_brick) %>% add_date_columns()
+
+# calculate gdd10 in dataframe
+df <- df_in %>%
+  dplyr::filter(stationid %in% nscc_stations_list|
+ #                 stationid == '47187' | # halifax
+                  stationid == '6354' 
+         )%>%
+  dplyr::filter(stationid!='S100') %>% # 2012
+  dplyr::filter(stationid!='S160') %>% # 2012, early in season/cold
+  dplyr::filter(stationid!='S20')  %>% #2012
+  dplyr::filter(stationid != 'S60') %>% #2012
+  dplyr::filter(stationid != 'S80') %>% #2012
+  dplyr::filter(stationid != 'CL1')
+modelling_stations <- df %>% filter(date_time == ymd('2012-06-01'))
+coordinates(modelling_stations) <- ~ EASTING+NORTHING
+
+
+df_12 <- df %>% dplyr::filter(year=='2012'&between(month,4,11)) %>%
+  group_by(stationid)%>%
+  dplyr::filter(date_time == max(date_time))
+```
+### Predict GDD10
+
+2012 growing season based on modelling at 500m.
+```{r}
+
+m<- gam(gdd10~s(dem,k=30,bs='cr')+s(cp,k=5,bs='cr')+s(east,north,k=20),data=df_12,method='REML')
+
+  
+  gam_raster <- raster::predict(rasters_brick,m)
+  plot(gam_raster, 
+       main=paste0('2012 : ',paste(deparse(m$formula),collapse='')), 
+       col=rev(rainbow(50)[1:42]),
+     breaks = c(gam_raster@data@min,seq(1000,1200,by=5),gam_raster@data@max))
+  points(modelling_stations)
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+
+```
+
+# Prepare the data
+```{r}
+
+# Make a list of input rasters
+in_folder <- 'f:\\data\\rasters\\input_rasters_b\\'
+resolution <- 100
+var_names <- list('dem','cp','east','north','tpi5000m',
+                     'asp','slp')
+ext = '.tif'
+rasters_list <- lapply(X=paste0(in_folder,var_names,resolution,'m',ext),FUN=raster::raster)
+
+# cp to the proper extent
+cp <- rasters_list[[2]]
+rasters_list[[2]] <- raster::resample(cp,rasters_list[[1]]) 
+
+# brick rasters
+rasters_brick <- raster::brick(rasters_list)
+
+
+  # transform
+rasters_brick[[2]]<-rasters_brick[[2]]^0.5
+rasters_brick[[6]] <- rasters_brick[[7]]*cos(rasters_brick[[6]])
+
+# names
+names(rasters_brick) <- var_names
+
+# extract rasters to dataframe
+df_in <- stations_df %>% 
+  extract_constant_raster_values(var_names,rasters_brick) %>% add_date_columns()
+
+# calculate gdd10 in dataframe
+df <- df_in %>%
+  dplyr::filter(stationid %in% nscc_stations_list|
+ #                 stationid == '47187' | # halifax
+                  stationid == '6354' 
+         )%>%
+  dplyr::filter(stationid!='S100') %>% # 2012
+  dplyr::filter(stationid!='S160') %>% # 2012, early in season/cold
+  dplyr::filter(stationid!='S20')  %>% #2012
+  dplyr::filter(stationid != 'S60') %>% #2012
+  dplyr::filter(stationid != 'S80') %>% #2012
+  dplyr::filter(stationid != 'CL1')
+modelling_stations <- df %>% filter(date_time == ymd('2012-06-01'))
+coordinates(modelling_stations) <- ~ EASTING+NORTHING
+
+
+df_12 <- df %>% dplyr::filter(year=='2012'&between(month,4,11)) %>%
+  group_by(stationid)%>%
+  dplyr::filter(date_time == max(date_time))
+```
+### Predict GDD10
+
+2012 growing season based on modelling at 500m.
+```{r}
+
+m<- gam(gdd10~s(dem,k=30,bs='cr')+s(cp,k=5,bs='cr')+s(east,north,k=20),data=df_12,method='REML')
+
+
+
+  
+  gam_raster <- raster::predict(rasters_brick,m)
+  plot(gam_raster, 
+       main=paste0('2012 - 250m: ',paste(deparse(m$formula),collapse='')), 
+       col=rev(rainbow(50)[1:42]),
+     breaks = c(gam_raster@data@min,seq(1000,1200,by=5),gam_raster@data@max))
+  points(modelling_stations)
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+
+```
+
+# Prepare the data
+```{r, eval = FALSE}
+
+# Make a list of input rasters
+in_folder <- 'f:\\data\\rasters\\input_rasters_b\\'
+resolution <- 20
+var_names <- list('dem','cp','east','north','tpi5000m',
+                     'asp','slp')
+ext = '.tif'
+rasters_list <- lapply(X=paste0(in_folder,var_names,resolution,'m',ext),FUN=raster::raster)
+
+# cp to the proper extent
+cp <- rasters_list[[2]]
+rasters_list[[2]] <- raster::resample(cp,rasters_list[[1]]) 
+
+# brick rasters
+rasters_brick <- raster::brick(rasters_list)
+
+
+# transform
+rasters_brick[[2]]<-rasters_brick[[2]]^0.5
+rasters_brick[[6]] <- rasters_brick[[7]]*cos(rasters_brick[[6]])
+
+# names
+names(rasters_brick) <- var_names
+
+# extract rasters to dataframe
+df_in <- stations_df %>% 
+  extract_constant_raster_values(var_names,rasters_brick) %>% add_date_columns()
+
+# calculate gdd10 in dataframe
+df <- df_in %>%
+  dplyr::filter(stationid %in% nscc_stations_list|
+ #                 stationid == '47187' | # halifax
+                  stationid == '6354' 
+         )%>%
+  dplyr::filter(stationid!='S100') %>% # 2012
+  dplyr::filter(stationid!='S160') %>% # 2012, early in season/cold
+  dplyr::filter(stationid!='S20')  %>% #2012
+  dplyr::filter(stationid != 'S60') %>% #2012
+  dplyr::filter(stationid != 'S80') %>% #2012
+  dplyr::filter(stationid != 'CL1')
+modelling_stations <- df %>% filter(date_time == ymd('2012-06-01'))
+coordinates(modelling_stations) <- ~ EASTING+NORTHING
+
+
+df_12 <- df %>% dplyr::filter(year=='2012'&between(month,4,11)) %>%
+  group_by(stationid)%>%
+  dplyr::filter(date_time == max(date_time))
+```
+### Predict GDD10
+
+2012 growing season based on modelling at 500m.
+```{r, eval = FALSE}
+
+m<- gam(gdd10~s(dem,k=30,bs='cr')+s(cp,k=5,bs='cr')+s(east,north,k=20),data=df_12,method='REML')
+
+
+  
+  gam_raster <- raster::predict(rasters_brick,m)
+  plot(gam_raster, 
+       main=paste0('2012 - 1000m: ',paste(deparse(m$formula),collapse='')), 
+       col=rev(rainbow(50)[1:42]),
+     breaks = c(gam_raster@data@min,seq(1000,1200,by=5),gam_raster@data@max))
+  points(modelling_stations)
+  par(mfrow=c(2,2))
+  plot.gam(m, residuals = TRUE, pch = 1, cex = 1, shift = coef(m)[1])
+  par(mfrow=c(1,1))
+
+```

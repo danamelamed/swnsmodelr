@@ -9,7 +9,7 @@ output:
 ---
 
 ```{r setup, echo=FALSE, warning = FALSE, message = FALSE}
-
+knitr::opts_chunk$set(eval = FALSE)
 library(swnsmodelr)
 library(knitr)
 
@@ -19,13 +19,16 @@ library(knitr)
 
 #### Polygon Boundaries
 ```{r, echo = FALSE, warning = FALSE, message=FALSE, fig.height = 10, fig.width = 10}
-gdd_zones <- raster(file.path("E:","Daily","gdd_zones.tif"))
-plot(gdd_zones,
-     col = rev(rainbow(n = 5,start = 0,end = 0.75)),
-     lwd = 0.1,
-     main = "Polygon boundaries: GDD5 zones")
-
-plot(zones_sp, add = TRUE)
+ecodists_shp <- readOGR("F:\\data","swns_ecodist")
+dem500m <- raster('f:\\data\\rasters\\input_rasters\\dem500m.tif')
+#ecodist_raster <- rasterize(ecodists_shp,dem500m, field=1)
+# gdd_dists <- raster(file.path("E:","Daily","gdd_dists.tif"))
+# plot(gdd_dists,
+#      col = rev(rainbow(n = 5,start = 0,end = 0.75)),
+#      lwd = 0.1,
+#      main = "Polygon boundaries: GDD5 dists")
+# 
+# plot(dists_sp, add = TRUE)
 ```
 
 #### Rasters
@@ -47,80 +50,114 @@ plot(zones_sp, add = TRUE)
 
 ```
 
-```{r, message = FALSE, warning = FALSE,  fig.width = 10, fig.height = 15,echo = FALSE}
-# This RMD summarizes raster values within polygons and writes a word document report.
 
-gdd_6ya <- raster(file.path("E:","Daily","gdd5_6ya.tif"))
-rasters_list_mod <- list(rasters_list[[1]], 
-                      rasters_list[[2]],
-                      rasters_list[[5]],
-                      rasters_list[[6]],
-                      rasters_list[[7]],
-                      gdd_6ya)
-# Select Rasters
-par(mfrow = c(3,2))
-lapply(FUN = plot, X = rasters_list_mod) %>% invisible()
+
+Make list of output rasters to analyze
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width = 10, fig.height = 15, fig.hold= TRUE}
+raster_summary <- list() 
+
+gdd10_rasters_names_in <- list.files('F:\\output\\500\\apr_nov',full.names = TRUE,pattern='gdd10_20')
+gdd10_rasters <- list()
+gdd10_rasters_names_out <- list()
+c <- 1
+for(i in seq_along(gdd10_rasters_names_in)){
+  if(substring(gdd10_rasters_names_in[[i]],nchar(gdd10_rasters_names_in[[i]])-3,nchar(gdd10_rasters_names_in[[i]]))=='.tif'){
+    print(c)
+    gdd10_rasters[[c]] <- gdd10_rasters_names_in[[i]] %>% raster
+    gdd10_rasters_names_out[[c]] <- gdd10_rasters_names_in[[i]] 
+    c <- c +1
+  }
+}
 
 ```
 
-### Histograms of raster values inside polygon boundaries
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width = 10, fig.height = 15, fig.hold= TRUE}
-raster_summary <- list() 
-for(j in seq_along(rasters_list_mod)){
+```{r}
+# Create a list of ecodistricts
+dists <- ecodists_shp@data$ECODISTRIC %>% unique()
+
+# Create a summary data.frame to populate
+dists_summary_df <- data.frame(matrix(NA, 
+                                      nrow = length(dists)*length(gdd10_rasters),
+                                      ncol = 5))
+names(dists_summary_df) <- c('dist','mean','sd','n','raster_names')
+
+gdd10_rasters_names_out %>% 
+  unlist %>%
+  substring(nchar(gdd10_rasters_names_out)-13,nchar(gdd10_rasters_names_out))
+  
+
+c <- 1
+for(j in seq_along(gdd10_rasters)){
  
-  raster_now <-rasters_list_mod[[j]]
+  raster_now <-gdd10_rasters[[j]]
   raster_name <- names(raster_now)
-    par(mfrow = c(3,2))
-    values <- list()
-    for(i in 1:5){
+  print(raster_name)
+   for(i in  seq_along(dists)){
       
-      # subset zones 
-      zone_now <- subset(zones_sp, zones_sp@data$gdd_zones == i)
-
-       plot(raster_now, 
-            main = paste("Zone ",i,": ",raster_name))
-       plot(zone_now, add = TRUE, lwd = 0.1)
-      values[[i]] <- raster::extract(raster_now,
-                                zone_now) %>%
-        as.data.frame()
-      names(values[[i]]) <- "values"
-      
-      
-       hist(values[[i]]$values,
-            freq = FALSE,
-            main = NA,
-            xlab = paste(raster_name, " values"),
-            xlim = c(minValue(raster_now), maxValue(raster_now))
-            )
-
+      # subset dists 
+      dist_now <- subset(ecodists_shp, ecodists_shp@data$ECODISTRIC == dists[[i]])
+      print(dists[[i]])
+      # extract gdd10 values to district
+      values <- raster::extract(raster_now,
+                                dist_now) %>% unlist()
+      dists_summary_df$raster_names[[c]] <- raster_name
+      dists_summary_df$dist[[c]] <- dists[i]
+      dists_summary_df$mean[[c]] <- mean(values,na.rm=TRUE)
+      dists_summary_df$sd[[c]] <- sd(values,na.rm=TRUE)
+      dists_summary_df$n[[c]] <- length(values)
+      c <- c+1
     }
-    raster_summary[[j]] <- values
+    
 }
-zones_summary <- raster_summary
+
 ```
 
 ### Summary table
 ```{r,message = FALSE, warning= FALSE, echo = FALSE}
-zones_summary_df <- data.frame(matrix(NA, 
-                                      nrow = length(zones_sp$gdd_zones),
-                                      ncol = length(rasters_list_mod)))
-names(zones_summary_df) <- lapply(FUN = names, X = rasters_list_mod)
-row.names(zones_summary_df) <- zones_sp$gdd_zones
+dists_summary_df <- data.frame(matrix(NA, 
+                                      nrow = length(dists),
+                                      ncol = length(rasters_list)))
+names(dists_summary_df) <- lapply(FUN = names, X = rasters_list)
+row.names(dists_summary_df) <- dists
 
-for(i in seq_along(zones_summary_df)){ # cols (rasters)
-  for(j in seq_along(zones_summary_df[[1]])){ # rows (zones)
+for(i in seq_along(dists_summary_df)){ # cols (rasters)
+  for(j in seq_along(dists_summary_df[[1]])){ # rows (dists)
     
-    pixels_now <- zones_summary[[i]][[j]]$values
-    mean_now <- pixels_now %>% mean %>% as.numeric() %>% round(2)
-    sd_now   <- pixels_now %>% sd %>% as.numeric() %>% round(2)
+    pixels_now <- dists_summary[[i]][[j]]$values
+    mean_now <- pixels_now %>% mean(na.rm=TRUE) %>% as.numeric() %>% round(2)
+    sd_now   <- pixels_now %>% sd(na.rm=TRUE) %>% as.numeric() %>% round(2)
     
-    zones_summary_df[[i]][[j]] <- paste0(mean_now, " (",sd_now,")")
+    dists_summary_df[[i]][[j]] <- paste0(mean_now, " (",sd_now,")")
     
   }
 }
-knitr::kable(zones_summary_df,
-      row.names = zones_sp$gdd_zones)
+knitr::kable(dists_summary_df,
+      row.names = dists)
+
+```
+
+```{r}
+dists_summary_df <- data.frame(matrix(NA, 
+                                      nrow = length(dists),
+                                      ncol = length(rasters_list)))
+names(dists_summary_df) <- names(rasters_list)
+row.names(dists_summary_df) <- dists
+
+for(i in seq_along(rasters_list)){ # cols (rasters)
+  for(j in seq_along(dists)){ # rows (dists)
+    
+    pixels_now <- dists_summary[[i]][[j]]$values
+    mean_now <- mean(pixels_now)
+    sd_now   <- sd(pixels_now)
+    
+    dists_summary_df[j, i] <- paste0(round(mean_now, 2), " (", round(sd_now, 2), ")")
+    
+  }
+}
+
+knitr::kable(dists_summary_df,
+             row.names = dists)
 
 ```
 

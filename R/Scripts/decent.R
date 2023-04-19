@@ -45,13 +45,13 @@
 #        mapping=aes(x=date_time,y=temp_mean))+
 #   geom_point(aes(col=stationid))
 # 
-# ggplot(data=df_13
+# ggplot(data=df_12
 #        ,aes(x=EASTING,y=NORTHING))+
 #   geom_point(aes(col=gdd10)) +
 #   scale_color_gradientn(colors=rev(rainbow(10)[1:8])) +
 #   scale_size_continuous(range = c(0.1,10),breaks=c(-50,0,50,100)) +
 #   coord_fixed()
-# 
+
 # 
 # 
 # m <- gam(gdd10~

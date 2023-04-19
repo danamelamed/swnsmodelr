@@ -1,3 +1,5 @@
+#' Creates a list of raster objects
+#' @export
 create_rasters_list  <- function(in_folder,
                                 raster_names,
                                 resolution,
