@@ -13,79 +13,72 @@ library(swnsmodelr)
 par(mfrow=c(2,2))
 ```
 
-Define Validation Stations as a List
+
+Calculate residuals and (later) number of missing days per validation station
 ```{r}
-# Prepare the data
-# Make a list of input rasters
-
-model_stations_list <- c(nscc_stations_list,'6354','47187')
-
-# validation stations df & sp
-validation_stations_df <- stations_df %>% filter(!(stationid %in% model_stations_list)) %>%
+validation_stations <- validation_stations %>% 
+  group_by(stationid,year(date_time),month(date_time)) %>%
   filter(date_time == max(date_time))
+
+
+months_df <- list()
+c <-1
+for(month in seq(4,11,1)){
+  model_stations_now <- model_stations %>% filter(year(date_time)==2012 & month(date_time) == month)
+  m <- gam(gdd10_acc ~ s(dem) + s(cp) + s(east,north), data = model_stations_now)
   
-
-write.csv(df_test,'f:\\data\\validation7.csv')
-
-```
-
-Extract outputs to validation stations
-```{r}
-v_stations <- read.csv('f:\\data\\validation_stations_edit.csv')
-v_stations <- v_stations %>% mutate(stationid = as.character(stationid)) %>% filter(year(date_time)=='2012') %>%
-  group_by(stationid) %>%
-  filter(date_time == max(date_time)) %>%
-  ungroup()
-file_list <- list.files('f:\\output\\500\\apr_nov\\',full.names=TRUE)
-gdd10_rasters <- list()
-c <- 1
-for(file in file_list){
-  if(substring(file,nchar(file)-3,nchar(file))=='.tif'){
-    gdd10_rasters[[c]] <- raster(file)
-    c <- c+1
-  }
+  validation_stations_now <- validations_stations %>% filter(year(date_time)==2012 & month(date_time) == month)
+  year_df[[c]] <- add_residuals(validation_stations_now,m)
+  c <- c+1
 }
-brick <- brick(gdd10_rasters)
-v_stations <- v_stations %>% extract_constant_raster_values(brick)
-write.csv(v_stations,'f:\\data\\validation_stations_edit_extract.csv')
-```
+validation_months <- bind_rows(months_df)
 
 
-I downloaded all the stations in swns from climatedata.ca (apr 2012 - nov 2016)
-```{r}
-in_v_df <- read.csv('f:\\data\\climate_daily_edit.csv') %>%
-  dplyr::select(STATION_NA,
-                stationid=CLIMATE_ID,
-                date_time=LOCAL_DATE,
-                temp_mean=MEAN_TEMPE,
-                EASTING,
-                NORTHING)
 
-v_df <- in_v_df %>% mutate(date_time=ymd(substring(date_time,1,10)))%>%
-  mutate(gdd10_daily = (ifelse(temp_mean>10,temp_mean-10,0))) %>%
-  filter(between(month(date_time),4,11)) %>%
-  group_by(stationid,year(date_time)) %>%
-  mutate(gdd10_daily = ifelse(is.na(gdd10_daily),0,gdd10_daily)) %>%
-  mutate(gdd10 = sum(round(gdd10_daily),0,na.rm=TRUE)) %>%
-  mutate(date_time = as.Date(date_time)) %>%
-  ungroup()%>%
-  dplyr::select(-'year(date_time)')
 
-v_stations <- v_df %>% mutate(stationid = as.character(stationid)) %>% filter(year(date_time)=='2012') %>%
-  group_by(stationid) %>%
-  filter(date_time == max(date_time)) %>%
-  ungroup()
-
-file_list <- list.files('f:\\output\\500\\apr_nov\\',full.names=TRUE)
-gdd10_rasters <- list()
-c <- 1
-for(file in file_list){
-  if(substring(file,nchar(file)-3,nchar(file))=='.tif'){
-    gdd10_rasters[[c]] <- raster(file)
-    c <- c+1
-  }
+year_df <- list()
+c <-1
+for(year in seq(2012,2016,1)){
+  model_stations_now <- model_stations %>% filter(year(date_time)==year)
+  m <- gam(gdd10_acc ~ s(dem) + s(cp) + s(east,north), data = model_stations_now)
+  
+  validation_stations_now <- validations_stations %>% filter(year(date_time)==year)
+  year_df[[c]] <- add_residuals(validation_stations_now,m)
+  c <- c+1
 }
-brick <- brick(gdd10_rasters)
-v_stations <- v_stations %>% extract_constant_raster_values(brick)
+validation_years <- bind_rows(years_df)
 
 ```
+
+Missing dates per station
+```{r}
+# check dates missing at stations
+
+
+years <- seq(2012,2016,1)
+missing_dates_df <- data.frame(matrix(ncol = 3, nrow = length(validation_stations_list)*length(years)))
+colnames(missing_dates_df) <- c('stationid','missing_days','date_time')
+
+c <- 1
+for(year in years){
+start <- ymd(paste0(year,'-04-30'))
+end <- ymd(paste0(year,'-11-30'))
+date_range <- seq(start, end, by = 1) 
+  for(station in validation_stations_list){
+print(station)
+  df_test <- stations_df %>% filter(stationid==station)
+  d <- df_test$date_time
+
+missing_days <- length(date_range[!date_range %in% d] )
+missing_dates_df$stationid[[c]] <- station
+missing_dates_df$missing_days[[c]] <- missing_days
+missing_dates_df$date_time[[c]] <- (paste0(year,'-11-30'))
+c <- c+1
+}
+  }
+missing_dates_df <-missing_dates_df %>% mutate(date_time = as.Date(date_time))
+validation_stations <- left_join(validation_stations,missing_dates_df,by=c('stationid','date_time'))
+```
+
+
+
