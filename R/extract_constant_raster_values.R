@@ -10,8 +10,8 @@
 extract_constant_raster_values <- function(temperatures_df,
                                            rasters_brick){
   stations <- temperatures_df %>% 
-    filter(!duplicated(stationid)) %>%
-    dplyr::select(stationid, EASTING, NORTHING)
+    dplyr::select(stationid, EASTING, NORTHING) %>%
+    dplyr::distinct()
   coordinates(stations) = ~ EASTING + NORTHING
   
   var_names <- rasters_brick %>% names()
