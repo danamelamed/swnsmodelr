@@ -14,71 +14,77 @@ par(mfrow=c(2,2))
 ```
 
 
-Calculate residuals and (later) number of missing days per validation station
+
 ```{r}
-validation_stations <- validation_stations %>% 
-  group_by(stationid,year(date_time),month(date_time)) %>%
-  filter(date_time == max(date_time))
+ecodist_avg_df <- model_stations_df.1 %>% 
+  dplyr::select(stationid,date_time,gdd10_daily,ecodist) %>%
+  group_by(date_time,ecodist) %>%
+  mutate(gdd10_ecodist_daily = round(mean(gdd10_daily,na.rm=TRUE)))%>%
+  ungroup() %>%
+  dplyr::select(ecodist,date_time,gdd10_ecodist_daily) %>%
+  distinct()
 
-
-months_df <- list()
-c <-1
-for(month in seq(4,11,1)){
-  model_stations_now <- model_stations %>% filter(year(date_time)==2012 & month(date_time) == month)
-  m <- gam(gdd10_acc ~ s(dem) + s(cp) + s(east,north), data = model_stations_now)
-  
-  validation_stations_now <- validations_stations %>% filter(year(date_time)==2012 & month(date_time) == month)
-  year_df[[c]] <- add_residuals(validation_stations_now,m)
-  c <- c+1
-}
-validation_months <- bind_rows(months_df)
-
-
-
-
-year_df <- list()
-c <-1
-for(year in seq(2012,2016,1)){
-  model_stations_now <- model_stations %>% filter(year(date_time)==year)
-  m <- gam(gdd10_acc ~ s(dem) + s(cp) + s(east,north), data = model_stations_now)
-  
-  validation_stations_now <- validations_stations %>% filter(year(date_time)==year)
-  year_df[[c]] <- add_residuals(validation_stations_now,m)
-  c <- c+1
-}
-validation_years <- bind_rows(years_df)
+validation_stations_df.2 <- validation_stations_df.1 %>%
+  left_join(ecodist_avg_df,by=c('date_time','ecodist')) %>%
+  mutate(gdd10_daily_2 = ifelse(is.na(gdd10_daily),
+                              gdd10_ecodist_daily,
+                              gdd10_daily)) %>%
+  group_by(stationid,year(date_time)) %>%
+  mutate(gdd10_daily_2 = ifelse(is.na(gdd10_daily_2),
+                               0,
+                               gdd10_daily_2))%>%
+  mutate(gdd10_acc_2 = cumsum(gdd10_daily_2))%>%
+  ungroup()
 
 ```
 
-Missing dates per station
+
 ```{r}
-# check dates missing at stations
+east_north_lookup_df.2 <- read.csv('f:\\data\\validation_stations_unique.csv')
+validation_stations_df.3 <- validation_stations_df.2 %>% 
+  dplyr::select(-c(EASTING,NORTHING))%>%
+  left_join(east_north_lookup_df.2,by='stationid')
 
-
-years <- seq(2012,2016,1)
-missing_dates_df <- data.frame(matrix(ncol = 3, nrow = length(validation_stations_list)*length(years)))
-colnames(missing_dates_df) <- c('stationid','missing_days','date_time')
-
-c <- 1
-for(year in years){
-start <- ymd(paste0(year,'-04-30'))
-end <- ymd(paste0(year,'-11-30'))
-date_range <- seq(start, end, by = 1) 
-  for(station in validation_stations_list){
-print(station)
-  df_test <- stations_df %>% filter(stationid==station)
-  d <- df_test$date_time
-
-missing_days <- length(date_range[!date_range %in% d] )
-missing_dates_df$stationid[[c]] <- station
-missing_dates_df$missing_days[[c]] <- missing_days
-missing_dates_df$date_time[[c]] <- (paste0(year,'-11-30'))
-c <- c+1
-}
-  }
-missing_dates_df <-missing_dates_df %>% mutate(date_time = as.Date(date_time))
-validation_stations <- left_join(validation_stations,missing_dates_df,by=c('stationid','date_time'))
 ```
+
+
+
+```{r}
+variables <- c('gdd10','gdd5','gdd5_5ya','gdd0')
+validation_stations_df.4 <- validation_stations_df.3
+for(var in variables){
+  rasters_df <- swnsmodelr::make_temporal_raster_df(
+    in_folder = paste0('f:\\output\\for_validation\\',var),
+    start_date = ymd('2012-04-30'),
+    end_date = ymd('2016-11-30'),
+    date_chars = c(7,16),
+    date_format = '%Y_%m_%d')
+
+  validation_stations_df.4 <- swnsmodelr::extract_temporal_raster_values(
+    temporal_rasters_df = rasters_df, 
+    temperatures_df = validation_stations_df.4, 
+    paste0(var,'_predicted'),
+    verbose = FALSE) 
+}
+
+
+
+```
+
+```{r}
+validation_stations_df.5 <- validation_stations_df.4 %>% 
+  mutate(gdd10_resid = gdd10_acc_2 - gdd10_predicted) %>%
+  group_by(stationid,year(date_time))%>%
+  filter(date_time == max(date_time)) %>%
+  ungroup() %>%
+  dplyr::select(-c(EASTING,NORTHING)) %>%
+  left_join(east_north_lookup_df.1,by='stationid') %>%
+  filter(gdd10_resid < 500&gdd10_resid>-500)
+write.csv(validation_stations_df.5,'f:\\data\\validation_stations_resid.csv')
+```
+
+
+
 
 
 
