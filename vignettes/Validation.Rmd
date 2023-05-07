@@ -6,50 +6,53 @@ output: word_document
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_chunk$set(fig.align = 'center')
-knitr::opts_chunk$set(fig.width = 9)
-knitr::opts_chunk$set(fig.height = 7)
+knitr::opts_chunk$set(eval = FALSE)
 library(swnsmodelr)
-par(mfrow=c(2,2))
 ```
 
-
+## 1. Compute the average daily GDD10 for each ecodist and date combination
+The first chunk computes the average daily Growing Degree Days (GDD10) for each ecodist and date combination. It first selects specific columns from a data frame (model_stations_df.1) using the dplyr::select() function. It then groups the data by date and ecodist using the group_by() function and computes the mean GDD10 for each ecodist and date combination using the mean() function with the na.rm=TRUE argument to handle missing values. The resulting GDD10 values are rounded to the nearest integer using the round() function. Finally, the resulting data frame is ungrouped and the relevant columns are selected and made distinct using the dplyr::select() and distinct() functions.
 
 ```{r}
+# Compute the average daily GDD10 for each ecodist and date combination
 ecodist_avg_df <- model_stations_df.1 %>% 
   dplyr::select(stationid,date_time,gdd10_daily,ecodist) %>%
   group_by(date_time,ecodist) %>%
-  mutate(gdd10_ecodist_daily = round(mean(gdd10_daily,na.rm=TRUE)))%>%
+  mutate(gdd10_ecodist_daily = round(mean(gdd10_daily,na.rm=TRUE)))%>% # Compute mean GDD10 for each ecodist and date
   ungroup() %>%
   dplyr::select(ecodist,date_time,gdd10_ecodist_daily) %>%
   distinct()
+```
 
+## Join ecodist average GDD10 with validation data, fill in missing daily GDD10 values with ecodist averages
+Joins the ecodist average GDD10 with validation data and fills in missing daily GDD10 values with ecodist averages. It first joins the validation data (validation_stations_df.1) with the ecodist average GDD10 data using the left_join() function. It then uses the ifelse() function to replace missing GDD10 values with the corresponding ecodist average value. The resulting data frame is then grouped by station ID and year, and any remaining missing GDD10 values are replaced with 0 using another ifelse() statement. The cumulative GDD10 is then computed using the cumsum() function. Finally, the data frame is ungrouped.
+```{r}
+# Join ecodist average GDD10 with validation data, fill in missing daily GDD10 values with ecodist averages
 validation_stations_df.2 <- validation_stations_df.1 %>%
   left_join(ecodist_avg_df,by=c('date_time','ecodist')) %>%
   mutate(gdd10_daily_2 = ifelse(is.na(gdd10_daily),
                               gdd10_ecodist_daily,
-                              gdd10_daily)) %>%
+                              gdd10_daily)) %>% # If GDD10 is missing, use ecodist average instead
   group_by(stationid,year(date_time)) %>%
   mutate(gdd10_daily_2 = ifelse(is.na(gdd10_daily_2),
                                0,
-                               gdd10_daily_2))%>%
-  mutate(gdd10_acc_2 = cumsum(gdd10_daily_2))%>%
+                               gdd10_daily_2))%>% # If GDD10 is still missing, replace with 0
+  mutate(gdd10_acc_2 = cumsum(gdd10_daily_2))%>% # Compute cumulative GDD10
   ungroup()
-
 ```
 
-
+The third chunk loads a lookup table for station coordinates and joins it with the validation data. It reads a CSV file ('f:\\data\\validation_stations_unique.csv') containing station coordinates and selects all columns except EASTING and NORTHING using the dplyr::select() function. It then joins this table with the validation data using the left_join() function.
 ```{r}
+# Load lookup table for station coordinates and join with validation data
 east_north_lookup_df.2 <- read.csv('f:\\data\\validation_stations_unique.csv')
 validation_stations_df.3 <- validation_stations_df.2 %>% 
   dplyr::select(-c(EASTING,NORTHING))%>%
   left_join(east_north_lookup_df.2,by='stationid')
-
 ```
 
-
-
+The fourth chunk extracts raster values for each variable of interest and joins them with the validation data. It first defines a vector of variables of interest (variables). It then loops over each variable, creates a temporal raster data frame using the swnsmodelr::make_temporal_raster_df() function, and extracts raster values using the swnsmodelr::extract_temporal_raster_values() function. The resulting values are added to the validation data using the paste0() function to create column names.
 ```{r}
+# Extract raster values for each variable of interest and join with validation data
 variables <- c('gdd10','gdd5','gdd5_5ya','gdd0')
 validation_stations_df.4 <- validation_stations_df.3
 for(var in variables){
@@ -58,26 +61,26 @@ for(var in variables){
     start_date = ymd('2012-04-30'),
     end_date = ymd('2016-11-30'),
     date_chars = c(7,16),
-    date_format = '%Y_%m_%d')
-
+    date_format = '%Y_%m_%d') # Create a temporal raster data frame for each variable
+    
   validation_stations_df.4 <- swnsmodelr::extract_temporal_raster_values(
     temporal_rasters_df = rasters_df, 
     temperatures_df = validation_stations_df.4, 
     paste0(var,'_predicted'),
-    verbose = FALSE) 
+    verbose = FALSE) # Extract raster values and add to validation data
 }
-
-
-
 ```
 
+The fifth chunk computes GDD10 residuals and filters for values between -500 and 500. It first computes GDD10 residuals by subtracting the predicted GDD10 from the accumulated GDD10 for each station and year combination. It then groups the data by station ID and year and filters for the maximum date time using the filter() function. The data is then ungrouped, and irrelevant columns (EASTING and NORTHING) are removed using the dplyr::select() function. The data is then joined with the station coordinates using the left_join() function. Finally, the data is filtered for residuals between -500 and 500 and written to a CSV file ('f:\\data\\validation_stations_resid.csv') using the write.csv() function.
 ```{r}
+# Compute GDD10 residuals and filter for values between -500 and 500
 validation_stations_df.5 <- validation_stations_df.4 %>% 
-  mutate(gdd10_resid = gdd10_acc_2 - gdd10_predicted) %>%
+  mutate(gdd10_resid = gdd10_acc_2 - gdd10_predicted) %>% # Compute GDD10 residual
   group_by(stationid,year(date_time))%>%
   filter(date_time == max(date_time)) %>%
   ungroup() %>%
   dplyr::select(-c(EASTING,NORTHING)) %>%
+ 
   left_join(east_north_lookup_df.1,by='stationid') %>%
   filter(gdd10_resid < 500&gdd10_resid>-500)
 write.csv(validation_stations_df.5,'f:\\data\\validation_stations_resid.csv')
